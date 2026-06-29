@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AllView Real Estate — Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+:root{--navy:#0D1B2A;--sky:#2A7FBF;--gold:#C9A84C;--coral:#D95C3A;--sage:#4B7C6F;--sand:#F5F0E8;--light:#FAFAF7;--border:#E4DDD0;--text:#1A2332;--muted:#7A8694;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);font-size:14px;}
+
+/* HEADER */
+.hdr{background:var(--navy);height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:2px solid var(--gold);}
+.logo{font-family:'DM Serif Display',serif;font-size:20px;color:#fff;}.logo span{color:var(--gold);}
+.hdr-note{font-size:11px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.5px;}
+
+/* TABS */
+.tabs{background:var(--navy);display:flex;padding:0 28px;gap:2px;border-bottom:1px solid rgba(255,255,255,.08);}
+.tab{background:none;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:11px 14px;cursor:pointer;transition:color .15s;}
+.tab:hover{color:rgba(255,255,255,.8);}
+.tab.on{color:var(--gold);border-bottom-color:var(--gold);}
+
+/* FILTER BAR */
+.fbar{background:#fff;border-bottom:1px solid var(--border);padding:10px 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.flabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-right:4px;}
+.fsel{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:var(--navy);background:var(--light);border:1px solid var(--border);border-radius:6px;padding:6px 26px 6px 9px;cursor:pointer;outline:none;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%237A8694' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;min-width:105px;}
+.fsel:hover{border-color:var(--sky);}
+.fsel.act{border-color:var(--sky);background-color:#EAF4FB;color:var(--sky);font-weight:600;}
+.fdiv{width:1px;height:18px;background:var(--border);}
+.freset{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:var(--muted);background:none;border:1px solid var(--border);border-radius:6px;padding:5px 11px;cursor:pointer;text-transform:uppercase;letter-spacing:.4px;}
+.freset:hover{border-color:var(--coral);color:var(--coral);}
+.fbadge{font-size:11px;font-weight:600;background:var(--sky);color:#fff;border-radius:20px;padding:2px 8px;display:none;}
+
+/* PAGES */
+.page{display:none;padding:24px 28px 48px;}
+.page.on{display:block;}
+.ptitle{font-family:'DM Serif Display',serif;font-size:24px;color:var(--navy);margin-bottom:4px;}
+.psub{font-size:13px;color:var(--muted);margin-bottom:20px;}
+
+/* KPI ROW */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px;}
+.kpi{background:#fff;border:1px solid var(--border);border-radius:10px;padding:18px 20px;position:relative;overflow:hidden;}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--sky);}
+.kpi.gld::before{background:var(--gold)}.kpi.cor::before{background:var(--coral)}.kpi.sge::before{background:var(--sage)}.kpi.nvy::before{background:var(--navy)}
+.klbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin-bottom:6px;}
+.kval{font-family:'DM Serif Display',serif;font-size:30px;color:var(--navy);line-height:1;margin-bottom:3px;}
+.ksub{font-size:12px;color:var(--muted);}
+.kbdg{display:inline-block;font-size:11px;font-weight:600;padding:1px 7px;border-radius:20px;margin-top:4px;}
+.bg{background:#E6F4EF;color:#2E7D53}.br{background:#FDECEA;color:#B93B2E}.by{background:#FEF9EC;color:#8B6B1A}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px;}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:18px;margin-bottom:18px;}
+
+/* CARD */
+.card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:20px 22px;}
+.ctitle{font-size:13px;font-weight:600;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}
+.csub{font-size:12px;color:var(--muted);margin-bottom:16px;}
+.cw{position:relative;}.cw canvas{max-height:240px;}.cw.tall canvas{max-height:300px;}.cw.sh canvas{max-height:170px;}
+
+/* TABLE */
+.dt{width:100%;border-collapse:collapse;font-size:13px;}
+.dt th{text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:9px 11px;border-bottom:1px solid var(--border);background:var(--sand);}
+.dt td{padding:9px 11px;border-bottom:1px solid #F0ECE4;color:var(--text);}
+.dt tr:last-child td{border-bottom:none;}
+.dt tr:hover td{background:#FAFAF4;}
+
+/* PILLS */
+.pill{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.pg{background:#E6F4EF;color:#2E7D53}.pr{background:#FDECEA;color:#B93B2E}.pb{background:#E3F0FA;color:#1565C0}.py{background:#FEF9EC;color:#8B6B1A}.pgy{background:#F0EEE9;color:#5A6472}
+.ter{display:inline-block;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600;}
+.tn{background:#E8F4FD;color:#1565C0}.ts{background:#E8F5E9;color:#2E7D32}.tm{background:#FFF3E0;color:#E65100}.tsd{background:#F3E5F5;color:#6A1B9A}
+
+/* NPS BARS */
+.nbar-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.nbar-row:last-child{border-bottom:none;}
+.nbar-name{min-width:115px;font-size:12px;font-weight:500;}
+.nbar-track{height:6px;background:var(--border);border-radius:3px;flex:1;margin:0 12px;overflow:hidden;}
+.nbar-fill{height:100%;border-radius:3px;}
+.nbar-val{font-weight:600;font-size:14px;min-width:26px;text-align:right;}
+
+/* LEGEND */
+.leg{margin-top:14px;}
+.leg-item{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.leg-lbl{flex:1;}
+.leg-val{font-weight:600;color:var(--navy);}
+
+/* LEADER */
+.ldr-row{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid #F0ECE4;}
+.ldr-row:last-child{border-bottom:none;}
+.ldr-rank{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;background:var(--navy);color:#fff;}
+.ldr-rank.r1{background:var(--gold);color:var(--navy)}.ldr-rank.r2{background:#9EAAAD;color:#fff}.ldr-rank.r3{background:#C97B3E;color:#fff}
+.ldr-name{flex:1;font-weight:500;}
+.ldr-score{font-family:'DM Serif Display',serif;font-size:20px;color:var(--navy);}
+.ldr-pts{font-size:11px;color:var(--muted);}
+
+/* CONCESSION AMT */
+.ca{font-weight:600;color:var(--coral);}
+
+/* FEEDBACK CARDS */
+.fback{background:var(--sand);border-radius:8px;padding:14px;font-size:12px;line-height:1.6;color:var(--text);}
+.fstars{font-size:13px;color:var(--gold);margin-bottom:5px;}
+.fattr{margin-top:9px;font-size:11px;color:var(--muted);}
+.fgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+
+/* PLATFORM ROW */
+.plat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.plat-row:last-child{border-bottom:none;}
+.plat-name{font-size:13px;font-weight:500;color:var(--navy);}
+.plat-stars{color:var(--gold);font-size:13px;}
+.plat-score{font-family:'DM Serif Display',serif;font-size:22px;color:var(--navy);}
+
+@media(max-width:1000px){.g2,.g3,.g12{grid-template-columns:1fr;}.fgrid{grid-template-columns:1fr;}}
+
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div class="logo">AllView <span>Real Estate</span></div>
+  <div class="hdr-note">Data: Jan 2025 – Jun 2026</div>
+</div>
+
+<div class="tabs">
+  <button class="tab on"  id="t-overview"     onclick="show('overview',this)">Overview</button>
+  <button class="tab"     id="t-leasing"      onclick="show('leasing',this)">Leasing &amp; Vacancy</button>
+  <button class="tab"     id="t-maintenance"  onclick="show('maintenance',this)">Maintenance</button>
+  <button class="tab"     id="t-satisfaction" onclick="show('satisfaction',this)">NPS &amp; Reviews</button>
+  <button class="tab"     id="t-growth"       onclick="show('growth',this)">Business Dev</button>
+  <button class="tab"     id="t-team"         onclick="show('team',this)">Team Performance</button>
+</div>
+
+<div class="fbar">
+  <span class="flabel">Filters</span>
+  <select class="fsel" id="fy" onchange="applyF()">
+    <option value="">All Years</option>
+    <option value="2025">2025</option>
+    <option value="2026">2026</option>
+  </select>
+  <select class="fsel" id="fm" onchange="applyF()">
+    <option value="">All Months</option>
+    <option>January</option><option>February</option><option>March</option><option>April</option>
+    <option>May</option><option>June</option><option>July</option><option>August</option>
+    <option>September</option><option>October</option><option>November</option><option>December</option>
+  </select>
+  <select class="fsel" id="fwe" onchange="applyF()">
+    <option value="">All WE Dates</option>
+    <option value="2025-01-05">2025-01-05</option>
+<option value="2025-01-12">2025-01-12</option>
+<option value="2025-01-19">2025-01-19</option>
+<option value="2025-01-26">2025-01-26</option>
+<option value="2025-02-02">2025-02-02</option>
+<option value="2025-02-09">2025-02-09</option>
+<option value="2025-02-16">2025-02-16</option>
+<option value="2025-02-23">2025-02-23</option>
+<option value="2025-03-02">2025-03-02</option>
+<option value="2025-03-09">2025-03-09</option>
+<option value="2025-03-16">2025-03-16</option>
+<option value="2025-03-23">2025-03-23</option>
+<option value="2025-03-30">2025-03-30</option>
+<option value="2025-04-06">2025-04-06</option>
+<option value="2025-04-13">2025-04-13</option>
+<option value="2025-04-20">2025-04-20</option>
+<option value="2025-04-27">2025-04-27</option>
+<option value="2025-05-04">2025-05-04</option>
+<option value="2025-05-11">2025-05-11</option>
+<option value="2025-05-18">2025-05-18</option>
+<option value="2025-05-25">2025-05-25</option>
+<option value="2025-06-01">2025-06-01</option>
+<option value="2025-06-08">2025-06-08</option>
+<option value="2025-06-15">2025-06-15</option>
+<option value="2025-06-22">2025-06-22</option>
+<option value="2025-06-29">2025-06-29</option>
+<option value="2025-07-06">2025-07-06</option>
+<option value="2025-07-13">2025-07-13</option>
+<option value="2025-07-20">2025-07-20</option>
+<option value="2025-07-27">2025-07-27</option>
+<option value="2025-08-03">2025-08-03</option>
+<option value="2025-08-10">2025-08-10</option>
+<option value="2025-08-17">2025-08-17</option>
+<option value="2025-08-24">2025-08-24</option>
+<option value="2025-08-31">2025-08-31</option>
+<option value="2025-09-07">2025-09-07</option>
+<option value="2025-09-14">2025-09-14</option>
+<option value="2025-09-21">2025-09-21</option>
+<option value="2025-09-28">2025-09-28</option>
+<option value="2025-10-05">2025-10-05</option>
+<option value="2025-10-12">2025-10-12</option>
+<option value="2025-10-19">2025-10-19</option>
+<option value="2025-10-26">2025-10-26</option>
+<option value="2025-11-02">2025-11-02</option>
+<option value="2025-11-09">2025-11-09</option>
+<option value="2025-11-16">2025-11-16</option>
+<option value="2025-11-23">2025-11-23</option>
+<option value="2025-11-30">2025-11-30</option>
+<option value="2025-12-07">2025-12-07</option>
+<option value="2025-12-14">2025-12-14</option>
+<option value="2025-12-21">2025-12-21</option>
+<option value="2025-12-28">2025-12-28</option>
+<option value="2026-01-04">2026-01-04</option>
+<option value="2026-01-11">2026-01-11</option>
+<option value="2026-01-18">2026-01-18</option>
+<option value="2026-01-25">2026-01-25</option>
+<option value="2026-02-01">2026-02-01</option>
+<option value="2026-02-08">2026-02-08</option>
+<option value="2026-02-15">2026-02-15</option>
+<option value="2026-02-22">2026-02-22</option>
+<option value="2026-03-01">2026-03-01</option>
+<option value="2026-03-08">2026-03-08</option>
+<option value="2026-03-15">2026-03-15</option>
+<option value="2026-03-22">2026-03-22</option>
+<option value="2026-03-29">2026-03-29</option>
+<option value="2026-04-05">2026-04-05</option>
+<option value="2026-04-12">2026-04-12</option>
+<option value="2026-04-19">2026-04-19</option>
+<option value="2026-04-26">2026-04-26</option>
+<option value="2026-05-03">2026-05-03</option>
+<option value="2026-05-10">2026-05-10</option>
+<option value="2026-05-17">2026-05-17</option>
+<option value="2026-05-24">2026-05-24</option>
+<option value="2026-05-31">2026-05-31</option>
+<option value="2026-06-07">2026-06-07</option>
+<option value="2026-06-14">2026-06-14</option>
+<option value="2026-06-21">2026-06-21</option>
+  </select>
+  <div class="fdiv"></div>
+  <select class="fsel" id="ft" onchange="applyF()">
+    <option value="">All Territories</option>
+    <option>North OC</option><option>South OC</option><option>SD Properties</option>
+    <option>Commercial</option><option>Brenden</option><option>Elderkin</option><option>STONE</option>
+  </select>
+  <select class="fsel" id="fp" onchange="applyF()">
+    <option value="">All Property Types</option>
+    <option>Single-Family</option><option>Multi-Family</option><option>Commercial</option>
+  </select>
+  <div class="fdiv"></div>
+  <button class="freset" onclick="resetF()">&#10005; Reset</button>
+  <span class="fbadge" id="fbadge">Filtered</span>
+</div>
+
+
+<div class="page on" id="overview">
+  <p class="ptitle">Operations Overview</p>
+  <p class="psub" id="sub-overview">All territories · 2025</p>
+  <div class="krow">
+    <div class="kpi gld" id="kpi-rent-roll"><div class="klbl">Monthly Rent Roll</div><div class="kval">$2,885</div><div class="ksub">Avg rent / unit · all data</div></div>
+    <div class="kpi" id="kpi-vacant"><div class="klbl">Vacant Units</div><div class="kval">65</div><div class="ksub">Vacant-Unrented</div><span class="kbdg br">4 Territories</span></div>
+    <div class="kpi sge" id="kpi-lr-renewed"><div class="klbl">Leases Renewed</div><div class="kval">52</div><div class="ksub">vs 14 move-outs</div></div>
+    <div class="kpi cor"><div class="klbl">Open Work Orders</div><div class="kval">450+</div><div class="ksub">Assigned / Scheduled</div></div>
+    <div class="kpi"><div class="klbl">Best NPS Territory</div><div class="kval">South OC</div><div class="ksub">Score: 94 avg</div><span class="kbdg bg">World-class</span></div>
+    <div class="kpi nvy"><div class="klbl">5-Star Review Lead</div><div class="kval">Ana</div><div class="ksub">11 reviews · 275 pts</div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ctitle">Move-Ins vs Move-Outs</div><div class="csub">Monthly tenant flow · 2025</div><div class="cw"><canvas id="c-move"></canvas></div></div>
+    <div class="card"><div class="ctitle">Work Orders by Month</div><div class="csub">Total opened · 2025</div><div class="cw"><canvas id="c-wo"></canvas></div></div>
+  </div>
+  <div class="g12">
+    <div class="card">
+      <div class="ctitle">Vacancy by Territory</div><div class="csub">Vacant-Unrented ÷ Total Properties · EOM snapshot</div>
+      <div class="cw sh"><canvas id="c-vac"></canvas></div>
+      <div class="leg" id="vac-leg"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">NPS Score by Territory</div><div class="csub">Latest recorded score per region</div>
+      <div id="nps-bars-ov"></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="leasing">
+  <p class="ptitle">Leasing &amp; Vacancy</p>
+  <p class="psub" id="sub-leasing">Rental applications, vacancy tracking, and lease renewals</p>
+  <div class="krow">
+    <div class="kpi" id="kpi-apps"><div class="klbl">Total Applications</div><div class="kval">1,527</div><div class="ksub">All statuses</div></div>
+    <div class="kpi sge" id="kpi-converted"><div class="klbl">Converted (Leases)</div><div class="kval">127</div><div class="ksub">8.3% conversion rate</div></div>
+    <div class="kpi cor" id="kpi-denied"><div class="klbl">Denied</div><div class="kval">454</div><div class="ksub">Credit / income fails</div></div>
+    <div class="kpi gld"><div class="klbl">Avg Days Vacant</div><div class="kval">160</div><div class="ksub">Per unit when listed</div></div>
+    <div class="kpi"><div class="klbl">Renewal Rate</div><div class="kval">79%</div><div class="ksub">1,092 renewed</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Application Outcomes</div><div class="csub">Breakdown of all rental applications</div>
+      <div class="cw sh"><canvas id="c-app"></canvas></div>
+      <div class="leg" id="app-leg"></div>
+    </div>
+    <div class="card"><div class="ctitle">Lease Renewal Outcomes</div><div class="csub">EOM snapshot · 2026 · last WE of each month</div><div class="cw"><canvas id="c-lr"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Top Vacant Properties</div><div class="csub" id="vac-sub">Snapshot: 2026-06-21 · sorted by days vacant</div>
+      <table class="dt"><thead><tr><th>Property</th><th>Territory</th><th>Days</th><th>Status</th></tr></thead><tbody id="top-vacant-tbody">
+        <tr><td>4616 36th Street, SD</td><td><span class="ter tsd">SD</span></td><td>598</td><td><span class="pill pr">Unrented</span></td></tr>
+        <tr><td>1026 W 18th St, CM</td><td><span class="ter tm">Mid OC</span></td><td>315</td><td><span class="pill pr">Unrented</span></td></tr>
+        <tr><td>2704 Via Montezuma</td><td><span class="ter ts">South OC</span></td><td>238</td><td><span class="pill pr">Unrented</span></td></tr>
+        <tr><td>3358 Tempe Drive</td><td><span class="ter tn">North OC</span></td><td>164</td><td><span class="pill pr">Unrented</span></td></tr>
+        <tr><td>1729 Irvine Avenue</td><td><span class="ter tm">Mid OC</span></td><td>48</td><td><span class="pill pr">Unrented</span></td></tr>
+        <tr><td>31052 Via Santo Tomas</td><td><span class="ter ts">South OC</span></td><td>47</td><td><span class="pill pr">Unrented</span></td></tr>
+      </tbody></table>
+    </div>
+    <div class="card">
+      <div class="ctitle">Avg Unit Turn by Month</div><div class="csub">150 completed turns · goal = 15 days</div>
+      <div class="cw"><canvas id="c-ut"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="maintenance">
+  <p class="ptitle">Maintenance &amp; Work Orders</p>
+  <p class="psub" id="sub-maintenance">5,660 total work orders · 2025</p>
+  <div class="krow">
+    <div class="kpi sge" id="kpi-wo-completed"><div class="klbl">Completed</div><div class="kval">3,823</div><div class="ksub">67.5% of all orders</div></div>
+    <div class="kpi" id="kpi-wo-canceled"><div class="klbl">Canceled</div><div class="kval">809</div><div class="ksub">14.3%</div></div>
+    <div class="kpi cor" id="kpi-wo-open"><div class="klbl">Still Open</div><div class="kval">450+</div><div class="ksub">Assigned + Scheduled</div></div>
+    <div class="kpi gld"><div class="klbl">Avg Unit Turn</div><div class="kval">17.51</div><div class="ksub">Days · 150 completed</div></div>
+    <div class="kpi" id="kpi-wo-nocharge"><div class="klbl">No Charge Completed</div><div class="kval">533</div><div class="ksub">Resolved without billing</div></div>
+    <div class="kpi cor" id="kpi-ar"><div class="klbl">A/R % (Jun 2026)</div><div class="kval">0.60%</div><div class="ksub">$38,494 · 57 tenants</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Work Order Status</div><div class="csub">All 5,660 orders by status</div>
+      <div class="cw sh"><canvas id="c-wos"></canvas></div>
+      <div class="leg" id="wos-leg"></div>
+    </div>
+    <div class="card"><div class="ctitle">Top Issue Categories</div><div class="csub">Most common maintenance requests</div><div class="cw"><canvas id="c-woi"></canvas></div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Owner Concessions</div><div class="csub">Management errors that cost AllView money</div>
+      <table class="dt"><thead><tr><th>Property</th><th>Month</th><th>Amount</th><th>Issue</th></tr></thead><tbody id="con-tbody">
+        <tr><td>3344 Bajo Ct, Carlsbad</td><td>Apr 2025</td><td class="ca">$5,700</td><td>Work done without approval</td></tr>
+        <tr><td>21436 Avery Lane, HB</td><td>Jun 2025</td><td class="ca">$3,200</td><td>Lease agreement error</td></tr>
+        <tr><td>1215 E Balboa, NB</td><td>Apr 2025</td><td class="ca">$1,500</td><td>Keys lost</td></tr>
+        <tr><td>1043 Estes St, El Cajon</td><td>Jun 2025</td><td class="ca">$1,500</td><td>Tenant renewal error</td></tr>
+        <tr><td>215 Avenida Serra</td><td>Sep 2025</td><td class="ca">$500</td><td>Missed rent increase</td></tr>
+        <tr><td>431 Venice Way, LA</td><td>Sep 2025</td><td class="ca">$450</td><td>Ignored maintenance</td></tr>
+        <tr><td>530 K St #605, SD</td><td>Jun 2025</td><td class="ca">$450</td><td>No move-in inspection</td></tr>
+      </tbody></table>
+    </div>
+    <div class="card">
+      <div class="ctitle">A/R % — Month over Month</div>
+      <div class="csub" id="up-sub">AR = Total Unpaid (col I) ÷ Total Monthly Rent · EOM snapshot per month</div>
+      <div class="cw tall"><canvas id="c-ar"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="satisfaction">
+  <p class="ptitle">Owner NPS &amp; Reviews</p>
+  <p class="psub" id="sub-satisfaction">Satisfaction tracking across territories and platforms</p>
+  <div class="krow">
+    <div class="kpi gld" id="kpi-yelp-oc"><div class="klbl">OC Yelp Rating</div><div class="kval">4.7 &#9733;</div><div class="ksub">Latest recorded</div></div>
+    <div class="kpi" id="kpi-goog-oc"><div class="klbl">OC Google Rating</div><div class="kval">4.6 &#9733;</div><div class="ksub">Latest recorded</div></div>
+    <div class="kpi sge" id="kpi-goog-sd"><div class="klbl">SD Google Rating</div><div class="kval">4.4 &#9733;</div><div class="ksub">Latest recorded</div></div>
+    <div class="kpi"><div class="klbl">Best NPS Territory</div><div class="kval">South OC</div><div class="ksub">94 avg score</div><span class="kbdg bg">World-class</span></div>
+    <div class="kpi cor"><div class="klbl">Needs Attention</div><div class="kval">SD Props</div><div class="ksub">Score: 55–73 range</div></div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ctitle">NPS Score Trend</div><div class="csub">Weekly NPS by territory · 2025</div><div class="cw tall"><canvas id="c-nps"></canvas></div></div>
+    <div class="card">
+      <div class="ctitle">Platform Ratings</div><div class="csub">Latest Yelp &amp; Google scores</div>
+      <br>
+      <div id="plat-ratings"><div class="plat-row"><div class="plat-name">OC — Yelp</div><div class="plat-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="plat-score">5.0</div></div>
+      <div class="plat-row"><div class="plat-name">OC — Google</div><div class="plat-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="plat-score">4.99</div></div>
+      <div class="plat-row"><div class="plat-name">SD — Yelp</div><div class="plat-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="plat-score">5.0</div></div>
+      <div class="plat-row"><div class="plat-name">SD — Google</div><div class="plat-stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><div class="plat-score">5.0</div></div></div>
+      <br>
+      <div class="ctitle">NPS by Territory (Latest)</div><div class="csub" style="margin-bottom:12px">Avg score per region</div>
+      <div id="nps-bars-sat"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Owner Feedback</div><div class="csub" style="margin-bottom:14px">5-star NPS responses</div>
+    <div class="fgrid">
+      <div class="fback"><div class="fstars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><em>"AllView has provided superb service. Return calls immediately, fast turnaround on service calls, and a keen sense of balance between customer service and profitability."</em><div class="fattr">— Owner of 4 Properties · South OC</div></div>
+      <div class="fback"><div class="fstars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><em>"The team keeps right on top of all aspects of the properties and informs me whenever there is something that needs to be done. They are quick and efficient."</em><div class="fattr">— Owner of 3 Properties · South OC</div></div>
+      <div class="fback"><div class="fstars">&#9733;&#9733;&#9733;&#9733;&#9733;</div><em>"I like your service because you represent the owner not the tenant. Always easy to contact and very friendly service."</em><div class="fattr">— Tenant · SD Properties</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="growth">
+  <p class="ptitle">Business Development</p>
+  <p class="psub" id="sub-growth">New owner pipeline · BDM performance · Churn</p>
+  <div class="krow">
+    <div class="kpi sge" id="kpi-bdm-won"><div class="klbl">Deals Won</div><div class="kval">19</div><div class="ksub">71 units added</div></div>
+    <div class="kpi" id="kpi-bdm-active"><div class="klbl">Active Pipeline</div><div class="kval">35</div><div class="ksub">In progress</div></div>
+    <div class="kpi cor" id="kpi-bdm-lost"><div class="klbl">Deals Lost</div><div class="kval">11</div><div class="ksub">Competitors / unresponsive</div></div>
+    <div class="kpi gld" id="kpi-bdm-wr"><div class="klbl">Win Rate</div><div class="kval">63%</div><div class="ksub">Won vs Won+Lost</div></div>
+    <div class="kpi nvy"><div class="klbl">Properties Terminated</div><div class="kval">27</div><div class="ksub">Jan–Mar 2025</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Pipeline by Stage</div><div class="csub">Current BDM deal distribution</div>
+      <div class="cw sh"><canvas id="c-bdm"></canvas></div>
+      <div class="leg" id="bdm-leg"></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">Lead Sources</div><div class="csub">Where new owner inquiries come from</div>
+      <div class="cw sh"><canvas id="c-src"></canvas></div>
+      <div class="leg" id="src-leg"></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Properties Lost (Churn)</div><div class="csub">Management terminations · Jan–Mar 2025</div>
+      <table class="dt"><thead><tr><th>Property</th><th>Month</th><th>Reason</th></tr></thead><tbody id="bdm-lost-tbody">
+        <tr><td>33852 Pequito, Dana Point</td><td>January</td><td>Owner Terminated</td></tr>
+        <tr><td>17 Canyon Peak, NB</td><td>January</td><td><span class="pill pb">Owner Sold</span></td></tr>
+        <tr><td>2103 View Crest Glen</td><td>January</td><td><span class="pill pb">Owner Sold</span></td></tr>
+        <tr><td>49 Wintermist, Irvine</td><td>March</td><td>Owner Moved In</td></tr>
+        <tr><td>547 W Maple Ave, Orange</td><td>February</td><td>Owner Self-Managing</td></tr>
+        <tr><td>217 Avenida Cabrillo</td><td>February</td><td>Mgmt Co Terminated</td></tr>
+      </tbody></table>
+    </div>
+    <div class="card">
+      <div class="ctitle">Active BDM Pipeline</div><div class="csub">Deals by stage</div>
+      <table class="dt"><thead><tr><th>Stage</th><th>Count</th><th>Status</th></tr></thead><tbody id="bdm-pipeline-tbody">
+        <tr><td>Agreement Signed</td><td>19</td><td><span class="pill pg">Won</span></td></tr>
+        <tr><td>Discovery Call Complete</td><td>12</td><td><span class="pill pb">Active</span></td></tr>
+        <tr><td>Consultation Complete</td><td>9</td><td><span class="pill pb">Active</span></td></tr>
+        <tr><td>Agreement Sent</td><td>5</td><td><span class="pill py">Pending</span></td></tr>
+        <tr><td>Investor Passive Nurture</td><td>6</td><td><span class="pill pgy">Passive</span></td></tr>
+        <tr><td>Lost — Hired Competitor</td><td>4</td><td><span class="pill pr">Lost</span></td></tr>
+        <tr><td>Lost — Unresponsive</td><td>4</td><td><span class="pill pr">Lost</span></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="page" id="team">
+  <p class="ptitle">Team Performance</p>
+  <p class="psub" id="sub-team">5-star reviews, email response times, and leasing activity</p>
+  <div class="krow">
+    <div class="kpi gld" id="kpi-top-reviewer"><div class="klbl">Top Reviewer</div><div class="kval">Ana</div><div class="ksub">11 reviews · 275 pts</div></div>
+    <div class="kpi" id="kpi-total-reviews"><div class="klbl">Total 5-Star Reviews</div><div class="kval">51</div><div class="ksub">Across all team members</div></div>
+    <div class="kpi sge"><div class="klbl">Fastest Email Response</div><div class="kval">Mel</div><div class="ksub">40 min avg</div></div>
+    <div class="kpi"><div class="klbl">Leases Renewed</div><div class="kval">1,092</div><div class="ksub">Jan–Jun 2025</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">5-Star Review Leaderboard</div><div class="csub">Yelp + Google · Baseline totals</div>
+      <br>
+      <div id="leaderboard"></div>
+    </div>
+    <div class="card"><div class="ctitle">5-Star Reviews by Platform</div><div class="csub">Yelp OC, Google OC, Google SD, Yelp SD</div><div class="cw"><canvas id="c-star"></canvas></div></div>
+  </div>
+  <div class="card">
+    <div class="ctitle">Email Response Times</div><div class="csub">Work-hours avg response per team member · March 2025</div>
+    <div class="cw tall"><canvas id="c-email"></canvas></div>
+  </div>
+</div>
+<script>
+<<<DATA_PLACEHOLDER>>>
+<<<D2_PLACEHOLDER>>>
+// ── COLORS ────────────────────────────────────────────
+const C = {
+  navy:'#0D1B2A', sky:'#2A7FBF', gold:'#C9A84C', coral:'#D95C3A',
+  sage:'#4B7C6F', muted:'#7A8694', skyL:'rgba(42,127,191,0.15)',
+  border:'#E4DDD0', purp:'#7B58A6'
+};
+
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MS     = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TERS   = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+const TER_C  = {'North OC':C.sky,'South OC':C.sage,'SD Properties':C.purp,'Brenden':C.gold,'Elderkin':C.coral,'Commercial':C.muted,'STONE':'#4A4A4A'};
+
+// ── CHART REGISTRY ─────────────────────────────────────
+const CHARTS = {};
+function mkChart(id, type, labels, datasets, opts) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (CHARTS[id]) { CHARTS[id].destroy(); delete CHARTS[id]; }
+  Chart.defaults.font.family = 'DM Sans,sans-serif';
+  Chart.defaults.color = '#7A8694';
+  Chart.defaults.plugins.legend.display = false;
+  CHARTS[id] = new Chart(el.getContext('2d'), {
+    type, data: {labels, datasets},
+    options: Object.assign({responsive:true,maintainAspectRatio:true}, opts||{})
+  });
+}
+
+// ── LOOKUP ────────────────────────────────────────────
+function lk(tbl, y, mo, t, p) {
+  return DATA[tbl][(y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'')] || 0;
+}
+function lkavg(tbl, y, mo, t, p) {
+  const v = DATA[tbl][(y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'')];
+  return (v !== undefined) ? v : null;
+}
+function lkwe(tbl, we, t, p) {
+  return DATA[tbl][(we||'')+'|'+(t||'')+'|'+(p||'')] || 0;
+}
+
+// ── NPS BARS ──────────────────────────────────────────
+function renderNPSBars(id, y, mo, t, p) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const ters = t ? [t] : TERS.filter(ter => ter!=='Elderkin'&&ter!=='STONE');
+  const rows = ters.map(ter => ({name:ter, val:lkavg('nps',y,mo,ter,p)}))
+    .filter(r => r.val !== null)
+    .sort((a,b)=>b.val-a.val);
+  if (!rows.length) { el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:10px 0">No NPS data for selected filters</p>'; return; }
+  el.innerHTML = rows.map(r => {
+    const col = r.val>=80?C.sage:r.val>=70?C.sky:C.coral;
+    return `<div class="nbar-row">
+      <span class="nbar-name">${r.name}</span>
+      <div class="nbar-track"><div class="nbar-fill" style="width:${r.val}%;background:${col}"></div></div>
+      <span class="nbar-val" style="color:${col}">${Math.round(r.val)}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── LEGEND BUILDER ─────────────────────────────────────
+function mkLeg(id, labels, colors, data) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = labels.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${colors[i]}"></div><div class="leg-lbl">${l}</div><div class="leg-val">${data[i]}</div></div>`).join('');
+}
+
+// ── LEADERBOARD ───────────────────────────────────────
+
+// ── MAIN RENDER ───────────────────────────────────────
+function render() {
+  const y  = document.getElementById('fy').value;
+  const mo = document.getElementById('fm').value;
+  const we = document.getElementById('fwe').value;
+  const t  = document.getElementById('ft').value;
+  const p  = document.getElementById('fp').value;
+
+  // ── Overview: Move-in / Move-out
+  if (we) {
+    const ters = t ? [t] : TERS;
+    mkChart('c-move','bar',ters,[
+      {label:'Move-Ins', data:ters.map(ter=>lkwe('mi_we',we,ter,p)), backgroundColor:C.sage},
+      {label:'Move-Outs',data:ters.map(ter=>lkwe('mo_we',we,ter,p)), backgroundColor:C.coral}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+    mkChart('c-wo','bar',ters,[
+      {label:'Work Orders',data:ters.map(ter=>lkwe('wo_we',we,ter,p)),backgroundColor:C.sky,borderRadius:4}
+    ],{scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+  } else {
+    mkChart('c-move','bar',MS,[
+      {label:'Move-Ins', data:MONTHS.map(m=>lk('mi', y,m,t,p)), backgroundColor:C.sage},
+      {label:'Move-Outs',data:MONTHS.map(m=>lk('mo', y,m,t,p)), backgroundColor:C.coral}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+    mkChart('c-wo','line',MS,[
+      {data:MONTHS.map(m=>lk('wo',y,m,t,p)),borderColor:C.sky,backgroundColor:C.skyL,tension:0.4,fill:true,pointRadius:4}
+    ],{scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+  }
+
+  // ── Leases Renewed KPI — EOM logic, filter-aware ────────────────────
+  (function() {
+    let lrYear  = y;
+    let lrMonth = mo;
+
+    // WE filter: resolve WE → its EOM month/year
+    if (we && DATA.we_month[we]) {
+      lrYear  = lrYear  || DATA.we_month[we].year;
+      lrMonth = lrMonth || DATA.we_month[we].month;
+    }
+
+    // Default year when nothing selected
+    if (!lrYear) lrYear = '2026';
+
+    let totalRenewed = 0, totalMoveOut = 0, totalExpiring = 0;
+
+    if (lrMonth) {
+      // Single month selected (or resolved from WE)
+      const r  = lk('lr_r', lrYear, lrMonth, t, p);
+      const mv = lk('lr_m', lrYear, lrMonth, t, p);
+      const pd = lk('lr_p', lrYear, lrMonth, t, p);
+      totalRenewed  = r;
+      totalMoveOut  = mv;
+      totalExpiring = r + mv + pd;
+    } else {
+      // All months — use pre-built year rollup key (year|||) to avoid shadowing bug
+      const rKey  = lrYear + '|||';
+      const tKey  = t ? lrYear + '||' + t + '|' + (p||'') : rKey;
+      totalRenewed  = DATA.lr_r[tKey] || 0;
+      totalMoveOut  = DATA.lr_m[tKey] || 0;
+      const totalPd = DATA.lr_p[tKey] || 0;
+      totalExpiring = totalRenewed + totalMoveOut + totalPd;
+    }
+
+    const el = document.getElementById('kpi-lr-renewed');
+    if (el) {
+      el.querySelector('.kval').textContent = totalRenewed.toLocaleString();
+      el.querySelector('.ksub').textContent =
+        'vs ' + totalMoveOut + ' move-outs · ' + totalExpiring + ' expiring';
+    }
+  })();
+
+  // ── Monthly Rent Roll KPI — Sum(Rent) / Count(Properties)
+  (function() {
+    const k   = (y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'');
+    const avg = D2.rr_avg[k];
+    const tot = D2.rr_rent[k] || 0;
+    const cnt = D2.rr_count[k] || 0;
+    const el  = document.getElementById('kpi-rent-roll');
+    if (el) {
+      const valEl = el.querySelector('.kval');
+      const subEl = el.querySelector('.ksub');
+      if (valEl) valEl.textContent = avg != null
+        ? '$' + avg.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})
+        : '—';
+      // divide by 2 because each property appears in ~2 WE snapshots on avg
+      if (subEl) subEl.textContent = '$' +
+        (Math.round(tot/2/1000*10)/10).toLocaleString() + 'K avg total rent · ' +
+        Math.round(cnt/2).toLocaleString() + ' units';
+    }
+  })();
+
+  // ── NPS bars
+  renderNPSBars('nps-bars-ov',  y, mo, t, p);
+  renderNPSBars('nps-bars-sat', y, mo, t, p);
+
+  // ── NPS trend
+  const npsTers = t ? [t] : ['North OC','South OC','SD Properties','Commercial','Brenden'];
+  mkChart('c-nps','line',MS,
+    npsTers.map(ter=>{
+      const vals = MONTHS.map(m=>lkavg('nps',y,m,ter,p));
+      return {label:ter,data:vals,borderColor:TER_C[ter]||C.sky,backgroundColor:'transparent',tension:0.4,pointRadius:3,spanGaps:true};
+    }),
+    {plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'},min:30,max:100}}}
+  );
+
+  // ── LR chart — EOM snapshot (last WE of each month)
+  // 2026 EOM WE cutoffs: Jan=2/1, Feb=3/1, Mar=3/29, Apr=4/26, May=5/31, Jun=6/21
+  const lrYear   = y || '2026';
+  const lrMonths = mo ? [mo] : MONTHS;
+  const lrLabels = lrMonths.map(m=>m.slice(0,3));
+  const lrRenewed = lrMonths.map(m=>lk('lr_r',lrYear,m,t,p));
+  const lrPending = lrMonths.map(m=>lk('lr_p',lrYear,m,t,p));
+  const lrMoveOut = lrMonths.map(m=>lk('lr_m',lrYear,m,t,p));
+  mkChart('c-lr','bar',lrLabels,[
+    {label:'Renewed', data:lrRenewed, backgroundColor:C.sage},
+    {label:'Pending', data:lrPending, backgroundColor:C.gold},
+    {label:'Move-Out',data:lrMoveOut, backgroundColor:C.coral},
+    {label:'Total Expiring',data:lrMonths.map((_,i)=>lrRenewed[i]+lrPending[i]+lrMoveOut[i]),
+     type:'line',borderColor:C.navy,borderWidth:2,pointRadius:4,fill:false,tension:0.2}
+  ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#F0ECE4'}}}});
+
+  // ── Unit Turn
+  const utData = MONTHS.map(m=>lkavg('ut',y,m,t,p));
+  mkChart('c-ut','bar',MS,[
+    {label:'Avg Days',data:utData,backgroundColor:utData.map(v=>v==null?'transparent':v<=15?C.sage:v<=25?C.gold:C.coral),borderRadius:4},
+    {label:'15-Day Goal',data:Array(12).fill(15),type:'line',borderColor:C.navy,borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}
+  ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': '+(ctx.raw??'N/A')+' days'}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'},title:{display:true,text:'Days'},min:0}}});
+}
+
+// ── NOTE: renderStatic() is filter-aware and called separately ─
+function renderStatic() {
+  const y  = document.getElementById('fy').value;
+  const mo = document.getElementById('fm').value;
+  const we = document.getElementById('fwe').value;
+  const t  = document.getElementById('ft').value;
+  const p  = document.getElementById('fp').value;
+  const k  = (y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'');
+
+  // ── helper: get D2 value by key ──────────────────────
+  function d2(table, fallback) {
+    return D2[table][k] || D2[table]['|||'] || fallback;
+  }
+  function d2k(table, key, fallback) {
+    const row = D2[table][k] || D2[table]['|||'] || {};
+    return row[key] || fallback;
+  }
+
+  // ── KPI UPDATE HELPERS ────────────────────────────────
+  function setKPI(selector, value) {
+    const el = document.querySelector(selector);
+    if (el) el.textContent = value;
+  }
+
+  // ── 1. VACANCY DONUT ─────────────────────────────────────────────────────
+  // Logic:
+  //   WE filter selected  → use exact WE snapshot
+  //   Month filter only   → use EOM WE for that month (last WE of the month)
+  //   No filters          → use latest EOM (June 2026)
+  let vacTerMap;
+  if (we) {
+    // Exact week selected
+    vacTerMap = D2.vac_donut2['we:'+we] || {};
+  } else if (y && mo) {
+    vacTerMap = D2.vac_donut2['eom:'+y+'|'+mo] || {};
+  } else if (mo) {
+    // Month only — sum across all years at EOM
+    vacTerMap = D2.vac_donut2['eom:|'+mo] || {};
+  } else if (y) {
+    vacTerMap = D2.vac_donut2['eom:'+y+'|'] || {};
+  } else {
+    // Default: latest EOM (June 2026)
+    vacTerMap = D2.vac_donut2['eom:2026|June'] || {};
+  }
+
+  // Apply territory filter if set
+  const vacTerMapFiltered = t
+    ? Object.fromEntries(Object.entries(vacTerMap).filter(([k]) => k === t))
+    : vacTerMap;
+
+  // Build from filtVac for the top vacant table (still WE-based for that table)
+  let filtVac;
+  if (we && D2.vac_we[we]) {
+    filtVac = D2.vac_we[we].filter(r =>
+      (!t || r.territory === t) && (!p || r.proptype === p)
+    );
+  } else if (y || mo) {
+    // Use the EOM snapshot list for that period
+    const eomKey = we ? 'we:'+we : mo ? 'eom:'+(y||'2026')+'|'+mo : 'eom:2026|June';
+    filtVac = D2.vac_top.filter(r =>
+      (!t || r.territory === t) && (!p || r.proptype === p)
+    );
+  } else {
+    filtVac = D2.vac_top.filter(r =>
+      (!t || r.territory === t) && (!p || r.proptype === p)
+    );
+  }
+  // Render donut as VACANCY % = vacant units / total portfolio properties
+  const terColorMap = {
+    'North OC':'#2A7FBF','Mid OC':'#C9A84C','South OC':'#4B7C6F',
+    'SD Properties':'#7B58A6','Commercial':'#D95C3A','STONE':'#4A4A4A',
+    'Elderkin':'#E07B39','Brenden':'#9EAAAD','TBD':'#cccccc'
+  };
+
+  // Get portfolio property counts for the same snapshot period
+  let portKey;
+  if (we) portKey = 'we:' + we;
+  else if (y && mo) portKey = 'eom:' + y + '|' + mo;
+  else if (mo) portKey = 'eom:|' + mo;
+  else if (y) portKey = 'eom:' + y + '|';
+  else portKey = 'eom:2026|June';
+  const portMap = D2.port_counts[portKey] || D2.port_counts['eom:|||'] || {};
+
+  // Build per-territory: vacPct = vacant / total_properties * 100
+  const vacLabels = Object.keys(vacTerMapFiltered)
+    .filter(k => k !== 'TBD' && k !== 'Mid OC' && vacTerMapFiltered[k] > 0);
+  const vacCounts = vacLabels.map(k => vacTerMapFiltered[k]);
+  const portTotals= vacLabels.map(k => portMap[k] || 0);
+  const vacPcts   = vacLabels.map((k,i) =>
+    portTotals[i] > 0 ? Math.round(vacCounts[i] / portTotals[i] * 1000) / 10 : null
+  );
+  // For the donut: use % where available, use a small token value for N/A territories
+  const vacDonutData = vacPcts.map((p,i) => p !== null ? p : 0);
+  const vacColors = vacLabels.map(k => terColorMap[k] || '#aaaaaa');
+
+  if (vacLabels.length > 0) {
+    mkChart('c-vac','doughnut',vacLabels,
+      [{data:vacDonutData,backgroundColor:vacColors,borderWidth:2,borderColor:'#fff'}],
+      {
+        cutout:'60%',
+        plugins:{
+          tooltip:{
+            callbacks:{
+              label: ctx => {
+                const i = ctx.dataIndex;
+                const ter = vacLabels[i];
+                const pct = vacPcts[i];
+                const pctStr = pct !== null ? pct + '%' : 'N/A (not in portfolio)';
+                return ' ' + ter + ': ' + pctStr + ' (' + vacCounts[i] + ' vacant / ' + (portTotals[i]||'?') + ' total)';
+              }
+            }
+          }
+        }
+      });
+    const legEl = document.getElementById('vac-leg');
+    if (legEl) {
+      const rows = vacLabels.map((l,i) =>
+        `<div class="leg-item">` +
+          `<div class="leg-dot" style="background:${vacColors[i]}"></div>` +
+          `<div class="leg-lbl">${l}</div>` +
+          `<div class="leg-val">${vacPcts[i] !== null ? vacPcts[i]+'%' : 'N/A'} <span style="color:var(--muted);font-size:11px">(${vacCounts[i]}${portTotals[i] ? '/'+portTotals[i] : ''})</span></div>` +
+        `</div>`
+      ).join('');
+
+      // Global total row
+      const totalVac  = vacCounts.reduce((s,v)=>s+v, 0);
+      const totalPort = portTotals.reduce((s,v)=>s+v, 0);
+      const totalPct  = totalPort > 0 ? (Math.round(totalVac/totalPort*10000)/100) : 0;
+      const totalRow  =
+        `<div class="leg-item" style="margin-top:8px;padding-top:8px;border-top:2px solid var(--navy);">` +
+          `<div class="leg-dot" style="background:var(--navy)"></div>` +
+          `<div class="leg-lbl" style="font-weight:700;color:var(--navy)">Total</div>` +
+          `<div class="leg-val" style="font-weight:700;color:var(--navy)">${totalPct}% <span style="color:var(--muted);font-size:11px">(${totalVac}/${totalPort})</span></div>` +
+        `</div>`;
+
+      legEl.innerHTML = rows + totalRow;
+    }
+  }
+
+  // Update subtitle to show which snapshot is displayed
+  const subEl = document.getElementById('vac-sub');
+  if (subEl) {
+    let snapLabel;
+    if (we) snapLabel = 'WE: ' + we;
+    else if (y && mo) snapLabel = 'EOM: ' + mo + ' ' + y;
+    else if (mo) snapLabel = 'EOM: ' + mo + ' (all years)';
+    else if (y) snapLabel = 'EOM: all months ' + y;
+    else snapLabel = 'EOM: June 2026 (latest)';
+    subEl.textContent = 'Snapshot: ' + snapLabel + ' · sorted by days vacant';
+  }
+  // Update vacancy KPI: overall % + count
+  const totalVacUnrented = Object.entries(vacTerMapFiltered)
+    .filter(([k])=>k!=='TBD' && k!=='Mid OC').reduce((s,[,v])=>s+v,0);
+  const totalPortfolio = Object.entries(portMap)
+    .filter(([k])=>k!=='TBD').reduce((s,[,v])=>s+v,0);
+  const overallVacPct = totalPortfolio > 0
+    ? (Math.round(totalVacUnrented / totalPortfolio * 1000) / 10)
+    : 0;
+  setKPI('#kpi-vacant .kval', overallVacPct + '%');
+  setKPI('#kpi-vacant .ksub', totalVacUnrented + ' vacant / ' + totalPortfolio + ' total');
+
+  // ── 2. TOP VACANT PROPERTIES TABLE ───────────────────
+  const topVacEl = document.getElementById('top-vacant-tbody');
+  if (topVacEl) {
+    // filtVac already contains only Vacant-Unrented from the correct WE snapshot
+    const sorted = filtVac.slice().sort((a,b)=>b.days-a.days).slice(0,10);
+    const TC = {'North OC':'tn','South OC':'ts','Mid OC':'tm','SD Properties':'tsd'};
+    topVacEl.innerHTML = sorted.length
+      ? sorted.map(r=>`<tr><td>${r.name}</td><td><span class="ter ${TC[r.territory]||''}">${r.territory||'—'}</span></td><td>${r.days}</td><td><span class="pill pr">Unrented</span></td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--muted);text-align:center">No vacant properties for selected filters</td></tr>';
+  }
+
+  // ── 3. APPLICATION OUTCOMES DONUT ─────────────────────
+  const appRow = d2('app_donut', [0,0,0,0]);
+  const appLabels = ['Canceled','Denied','Approved','Converted'];
+  const appColors = ['#D95C3A','#9EAAAD','#2A7FBF','#4B7C6F'];
+  mkChart('c-app','doughnut',appLabels,[{data:appRow,backgroundColor:appColors,borderWidth:2,borderColor:'#fff'}],{cutout:'60%'});
+  const appLegEl = document.getElementById('app-leg');
+  if (appLegEl) appLegEl.innerHTML = appLabels.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${appColors[i]}"></div><div class="leg-lbl">${l}</div><div class="leg-val">${appRow[i]}</div></div>`).join('');
+  // Update KPI
+  const totalApps = appRow.reduce((a,b)=>a+b,0);
+  const convRate = totalApps ? Math.round(appRow[3]/totalApps*100*10)/10 : 0;
+  setKPI('#kpi-apps .kval', totalApps.toLocaleString());
+  setKPI('#kpi-converted .kval', appRow[3]);
+  setKPI('#kpi-converted .ksub', convRate+'% conversion rate');
+  setKPI('#kpi-denied .kval', appRow[1]);
+
+  // ── 4. WORK ORDER STATUS DONUT ────────────────────────
+  const wos = d2('wo_status', {});
+  const wosMap = {
+    'Completed':                 wos['Completed']||0,
+    'Canceled':                  wos['Canceled']||0,
+    'No Charge':                (wos['Completed No Need To Bill']||0),
+    'Assigned':                 (wos['Assigned']||0)+(wos['Scheduled']||0)+(wos['Waiting']||0),
+    'Other':                    (wos['Work Done']||0)+(wos['New']||0)+(wos['Estimated']||0)+(wos['Estimate Requested']||0),
+  };
+  const wosL = Object.keys(wosMap);
+  const wosD2 = wosL.map(k=>wosMap[k]);
+  const wosC = ['#4B7C6F','#9EAAAD','#2A7FBF','#C9A84C','#D95C3A'];
+  mkChart('c-wos','doughnut',wosL,[{data:wosD2,backgroundColor:wosC,borderWidth:2,borderColor:'#fff'}],{cutout:'60%'});
+  const wosLegEl = document.getElementById('wos-leg');
+  if (wosLegEl) wosLegEl.innerHTML = wosL.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${wosC[i]}"></div><div class="leg-lbl">${l}</div><div class="leg-val">${wosD2[i]}</div></div>`).join('');
+  // Update KPIs
+  const totalWO = wosD2.reduce((a,b)=>a+b,0);
+  setKPI('#kpi-wo-completed .kval', wosMap['Completed'].toLocaleString());
+  const completedPct = totalWO ? Math.round(wosMap['Completed']/totalWO*100*10)/10 : 0;
+  setKPI('#kpi-wo-completed .ksub', completedPct+'% of all orders');
+  setKPI('#kpi-wo-canceled .kval', wosMap['Canceled'].toLocaleString());
+  setKPI('#kpi-wo-open .kval', (wosMap['Assigned']).toLocaleString()+'+');
+  setKPI('#kpi-wo-nocharge .kval', wosMap['No Charge'].toLocaleString());
+
+  // ── 5. TOP WORK ORDER ISSUES ──────────────────────────
+  const woi = d2('wo_issues', {});
+  const woiSorted = Object.entries(woi).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  if (woiSorted.length) {
+    mkChart('c-woi','bar',
+      woiSorted.map(e=>e[0].replace('Other Maintenance - Not Listed','Other Maintenance')),
+      [{data:woiSorted.map(e=>e[1]),backgroundColor:[C.sky,C.muted,C.coral,C.sage,C.gold,C.sky,C.muted,C.coral]}],
+      {indexAxis:'y',scales:{x:{grid:{color:'#F0ECE4'}},y:{grid:{display:false}}}});
+  }
+
+  // ── 6. CONCESSIONS TABLE ──────────────────────────────
+  const conEl = document.getElementById('con-tbody');
+  if (conEl) {
+    const filtCon = D2.concessions.filter(r=>
+      (!y || r.year===y) && (!mo || r.month===mo) && (!t || r.territory===t)
+    ).sort((a,b)=>b.amount-a.amount);
+    conEl.innerHTML = filtCon.length
+      ? filtCon.map(r=>`<tr><td>${r.property}</td><td>${r.month} ${r.year}</td><td class="ca">$${r.amount.toLocaleString()}</td><td>${r.reason.slice(0,60)}${r.reason.length>60?'…':''}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="color:var(--muted);text-align:center">No concessions for selected filters</td></tr>';
+    const totalCon = filtCon.reduce((s,r)=>s+r.amount,0);
+    setKPI('#kpi-concessions .kval', '$'+totalCon.toLocaleString());
+  }
+
+  // ── 7. A/R % CHART — month over month, EOM snapshot ─────────────────
+  (function() {
+    const MONTHS = ['January','February','March','April','May','June',
+                    'July','August','September','October','November','December'];
+    const MS     = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    // Determine which years to show
+    const years = y ? [y] : ['2025','2026'];
+
+    // Build labels and data
+    const labels = []; const arPcts = []; const arAmts = []; const rnts = [];
+    years.forEach(yr => {
+      MONTHS.forEach((mo, i) => {
+        const k     = yr+'|'+mo+'|'+(t||'')+'|'+(p||'');
+        const pct   = D2.ar_pct[k];
+        const ar    = (D2.up_totals[k] || {total:0}).total;
+        const rnt   = D2.rr_totals[k] || 0;
+        if (pct != null || ar > 0) {
+          labels.push(MS[i]+' '+yr.slice(2));
+          arPcts.push(pct != null ? pct : 0);
+          arAmts.push(ar);
+          rnts.push(rnt);
+        }
+      });
+    });
+
+    const barColors = arPcts.map(v =>
+      v >= 15 ? C.coral : v >= 5 ? C.gold : C.sage
+    );
+
+    mkChart('c-ar', 'bar', labels, [
+      { label: 'AR %', data: arPcts, backgroundColor: barColors, borderRadius: 4,
+        yAxisID: 'y' },
+      { label: 'AR $', data: arAmts, type: 'line', borderColor: C.sky,
+        backgroundColor: 'transparent', tension: 0.3, pointRadius: 3,
+        yAxisID: 'y2' }
+    ], {
+      plugins: {
+        legend: { display: true, position: 'top',
+          labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8 } },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.dataset.label === 'AR %')
+                return ' AR%: ' + ctx.raw.toFixed(2) + '%';
+              return ' AR $: $' + ctx.raw.toLocaleString(undefined,
+                {maximumFractionDigits:0});
+            }
+          }
+        }
+      },
+      scales: {
+        x:  { grid: { display: false } },
+        y:  { grid: { color: '#F0ECE4' }, position: 'left',
+              title: { display: true, text: 'AR %' },
+              ticks: { callback: v => v + '%' } },
+        y2: { position: 'right', grid: { display: false },
+              title: { display: true, text: 'AR Amount ($)' },
+              ticks: { callback: v => '$' + (v >= 1000000
+                ? (v/1000000).toFixed(1)+'M'
+                : v >= 1000 ? (v/1000).toFixed(0)+'K' : v) } },
+      }
+    });
+
+    // Update KPI
+    const latestK = (y||'2026')+'|'+(mo||'June')+'|'+(t||'')+'|'+(p||'');
+    const latestPct = D2.ar_pct[latestK];
+    const latestAR  = (D2.up_totals[latestK] || {total:0}).total;
+    const latestCnt = (D2.up_totals[latestK] || {count:0}).count;
+    setKPI('#kpi-ar .kval', latestPct != null ? latestPct.toFixed(2)+'%' : '—');
+    setKPI('#kpi-ar .ksub', '$'+latestAR.toLocaleString(undefined,
+      {maximumFractionDigits:0})+' · '+latestCnt+' tenants');
+
+    // Update subtitle
+    const subEl = document.getElementById('up-sub');
+    if (subEl) {
+      const lbl = (mo ? mo+' ' : '') + (y || '2025–2026');
+      subEl.textContent = 'AR = Total Unpaid ÷ Total Rent · EOM snapshot · ' +
+        (t ? t+' · ' : '') + lbl;
+    }
+  })();
+
+
+  // ── 8. PLATFORM RATINGS ───────────────────────────────
+  const pr = D2.plat_ratings[k] || D2.plat_ratings['|||'] || {};
+  const platRows = [
+    {name:'OC — Yelp',    key:'Yelp OC',    stars:5},
+    {name:'OC — Google',  key:'Google OC',  stars:5},
+    {name:'SD — Yelp',    key:'Yelp SD',    stars:5},
+    {name:'SD — Google',  key:'Google SD',  stars:5},
+  ];
+  const platEl = document.getElementById('plat-ratings');
+  if (platEl) {
+    platEl.innerHTML = platRows.map(r=>{
+      const score = pr[r.key] ? pr[r.key].toFixed(2) : '—';
+      const fullStars = score !== '—' ? Math.round(pr[r.key]) : 0;
+      const starStr = '★'.repeat(fullStars) + '☆'.repeat(5-fullStars);
+      return `<div class="plat-row"><div class="plat-name">${r.name}</div><div class="plat-stars">${starStr}</div><div class="plat-score">${score}</div></div>`;
+    }).join('');
+  }
+  // Update KPIs
+  setKPI('#kpi-yelp-oc .kval',  (pr['Yelp OC']   ? pr['Yelp OC'].toFixed(1)   : '—') + ' ★');
+  setKPI('#kpi-goog-oc .kval',  (pr['Google OC']  ? pr['Google OC'].toFixed(1) : '—') + ' ★');
+  setKPI('#kpi-goog-sd .kval',  (pr['Google SD']  ? pr['Google SD'].toFixed(1) : '—') + ' ★');
+
+  // ── 9. BDM PIPELINE DONUT ────────────────────────────
+  const bdms = D2.bdm_status[k] || D2.bdm_status['|||'] || {};
+  const bdmLabs = ['won','lost','active','passive','invalid'];
+  const bdmNice = ['Won','Lost','Active','Passive','Invalid'];
+  const bdmD2   = bdmLabs.map(l=>bdms[l]||0);
+  const bdmC = ['#4B7C6F','#D95C3A','#2A7FBF','#9EAAAD','#C9A84C'];
+  mkChart('c-bdm','doughnut',bdmNice,[{data:bdmD2,backgroundColor:bdmC,borderWidth:2,borderColor:'#fff'}],{cutout:'60%'});
+  const bdmLegEl = document.getElementById('bdm-leg');
+  if (bdmLegEl) bdmLegEl.innerHTML = bdmNice.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${bdmC[i]}"></div><div class="leg-lbl">${l}</div><div class="leg-val">${bdmD2[i]}</div></div>`).join('');
+  setKPI('#kpi-bdm-won .kval', bdms['won']||0);
+  setKPI('#kpi-bdm-active .kval', bdms['active']||0);
+  setKPI('#kpi-bdm-lost .kval', bdms['lost']||0);
+  const winRate = (bdms['won']||0)+(bdms['lost']||0) > 0 ? Math.round((bdms['won']||0)/((bdms['won']||0)+(bdms['lost']||0))*100) : 0;
+  setKPI('#kpi-bdm-wr .kval', winRate+'%');
+
+  // ── 10. LEAD SOURCES DONUT ───────────────────────────
+  const srcs = D2.bdm_source[k] || D2.bdm_source['|||'] || {};
+  const srcMap = {
+    'Google/Website': (srcs['Website/Google Search']||0),
+    'Yelp':           (srcs['Yelp']||0),
+    'Call/Email':     (srcs['Call/Text/Email (Inbound/Outbound)']||0),
+    'Other':          (srcs['Calendly']||0)+(srcs['None Specified']||0),
+  };
+  const srcL = Object.keys(srcMap).filter(k=>srcMap[k]>0);
+  const srcD = srcL.map(l=>srcMap[l]);
+  const srcC = ['#2A7FBF','#C9A84C','#D95C3A','#4B7C6F'];
+  mkChart('c-src','doughnut',srcL,[{data:srcD,backgroundColor:srcC.slice(0,srcL.length),borderWidth:2,borderColor:'#fff'}],{cutout:'60%'});
+  const srcLegEl = document.getElementById('src-leg');
+  if (srcLegEl) srcLegEl.innerHTML = srcL.map((l,i)=>`<div class="leg-item"><div class="leg-dot" style="background:${srcC[i]}"></div><div class="leg-lbl">${l}</div><div class="leg-val">${srcD[i]}</div></div>`).join('');
+
+  // ── 11. BDM TABLES (Lost & Pipeline) ─────────────────
+  const bdmFilt = D2.bdm_all.filter(b=>
+    (!y||b.year===y) && (!mo||b.month===mo)
+  );
+  const lostEl = document.getElementById('bdm-lost-tbody');
+  if (lostEl) {
+    const lost = bdmFilt.filter(b=>b.status==='lost').slice(0,8);
+    lostEl.innerHTML = lost.length
+      ? lost.map(b=>`<tr><td>${b.property}</td><td>${b.month} ${b.year}</td><td>${b.source||'—'}</td></tr>`).join('')
+      : '<tr><td colspan="3" style="color:var(--muted);text-align:center">No lost deals for selected filters</td></tr>';
+  }
+  const pipeEl = document.getElementById('bdm-pipeline-tbody');
+  if (pipeEl) {
+    const stages = ['won','active','passive','lost'];
+    const stageLabel = {'won':'Won','active':'Active','passive':'Passive','lost':'Lost'};
+    const stageClass = {'won':'pg','active':'pb','passive':'pgy','lost':'pr'};
+    pipeEl.innerHTML = stages.map(s=>({s, c: bdmFilt.filter(b=>b.status===s).length}))
+      .filter(x=>x.c>0)
+      .map(x=>`<tr><td>${stageLabel[x.s]}</td><td>${x.c}</td><td><span class="pill ${stageClass[x.s]}">${stageLabel[x.s]}</span></td></tr>`).join('');
+  }
+
+  // ── 12. LEADERBOARD ───────────────────────────────────
+  const lbEl = document.getElementById('leaderboard');
+  if (lbEl) {
+    const lbData = D2.review_lb[k] || D2.review_lb['|||'] || [];
+    const rc = ['r1','r2','r3'];
+    lbEl.innerHTML = lbData.slice(0,12).map((s,i)=>
+      `<div class="ldr-row"><div class="ldr-rank ${rc[i]||''}">${i+1}</div><div class="ldr-name">${s.n}</div><div style="text-align:right"><div class="ldr-score">${s.c}</div><div class="ldr-pts">${s.r}&#9733;</div></div></div>`
+    ).join('');
+    // Update KPIs
+    if (lbData.length > 0) {
+      setKPI('#kpi-top-reviewer .kval', lbData[0].n.split(' ')[0]);
+      setKPI('#kpi-top-reviewer .ksub', lbData[0].c+' reviews · '+lbData[0].r+'★ avg');
+      const totalReviews = lbData.reduce((s,r)=>s+r.c,0);
+      setKPI('#kpi-total-reviews .kval', totalReviews);
+    }
+  }
+
+  // ── 13. 5-STAR PLATFORM CHART ─────────────────────────
+  const lbData = D2.review_lb[k] || D2.review_lb['|||'] || [];
+  const top10 = lbData.slice(0,10);
+  if (top10.length) {
+    mkChart('c-star','bar',
+      top10.map(s=>s.n.split(' ')[0]),
+      [
+        {label:'Yelp OC',  data:top10.map(s=>s.yo||0),backgroundColor:C.gold},
+        {label:'Google OC',data:top10.map(s=>s.go||0),backgroundColor:C.sky},
+        {label:'Google SD',data:top10.map(s=>s.gs||0),backgroundColor:C.sage},
+        {label:'Yelp SD',  data:top10.map(s=>s.ys||0),backgroundColor:C.coral},
+      ],
+      {plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
+       scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:'#F0ECE4'}}}});
+  }
+
+  // ── 14. EMAIL RESPONSE (static — no filter) ──────────
+  mkChart('c-email','bar',
+    ['Mel','Mojgan','Lindsay','Daniel','Sintia','Marcella','Daeyna','Info','Henry','Taylor','Brenden'],
+    [{label:'Hrs',data:[0.67,6.3,0,2.9,7.8,9.0,5.6,6.6,0,0.97,4.8],
+      backgroundColor:(ctx)=>ctx.raw===0?C.border:ctx.raw<3?C.sage:ctx.raw<6?C.gold:C.coral}],
+    {scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'},title:{display:true,text:'Hours'}}},
+     plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.raw===0?'No response recorded':ctx.raw+' hrs'}}}});
+}
+
+
+
+// ── TAB SWITCHING ─────────────────────────────────────
+function show(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  btn.classList.add('on');
+  // Re-render charts now that the tab is visible
+  setTimeout(function(){ render(); renderStatic(); }, 50);
+}
+
+// ── FILTER FUNCTIONS ──────────────────────────────────
+function applyF() {
+  const ids = ['fy','fm','fwe','ft','fp'];
+  ids.forEach(id=>{
+    const el=document.getElementById(id);
+    el.classList.toggle('act', el.value!=='');
+  });
+  const any = ids.some(id=>document.getElementById(id).value!=='');
+  document.getElementById('fbadge').style.display = any?'inline-block':'none';
+  render();
+  renderStatic();
+}
+
+function resetF() {
+  ['fy','fm','fwe','ft','fp'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.value='';
+    el.classList.remove('act');
+  });
+  document.getElementById('fbadge').style.display='none';
+  render();
+  renderStatic();
+}
+
+// ── BOOT ──────────────────────────────────────────────
+window.addEventListener('load', function() {
+  render();
+  renderStatic();
+});
+</script>
+</body>
+</html>
