@@ -1,0 +1,56 @@
+name: Refresh Dashboard
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for refresh (optional note)'
+        required: false
+        default: 'Data update'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Check out the repo ──────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Python ──────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # ── 3. Install dependencies ───────────────────────
+      - name: Install Python dependencies
+        run: |
+          pip install openpyxl requests
+
+      # ── 4. Download Excel files from OneDrive ─────────
+      - name: Download Excel files from OneDrive
+        run: |
+          python scripts/download_files.py
+
+      # ── 5. Build the dashboard ─────────────────────────
+      - name: Build dashboard
+        run: |
+          python scripts/build.py
+
+      # ── 6. Deploy to GitHub Pages ─────────────────────
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          publish_branch: gh-pages
+          commit_message: |
+            Dashboard refresh — ${{ github.event.inputs.reason || 'manual trigger' }}
+            Triggered by: ${{ github.actor }}
+            Run: ${{ github.run_number }}
