@@ -496,37 +496,47 @@ build_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M UTC')
 # ── SECTION 6: ASSEMBLE HTML ──────────────────────────────────────────────────
 print("[6/8] Assembling dashboard HTML...")
 
-CSS = """ + repr(CSS) + """
+# Use placeholder replacement instead of f-string to avoid conflicts
+# with CSS and JS curly braces
+HTML_TEMPLATE = (
+    '<!DOCTYPE html>\n'
+    '<html lang="en">\n'
+    '<head>\n'
+    '<meta charset="UTF-8">\n'
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+    '<title>AllView Real Estate — Dashboard</title>\n'
+    '<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>\n'
+    '<style><<<CSS>>></style>\n'
+    '</head>\n'
+    '<body>\n'
+    '<<<BODY>>>\n'
+    '<script>\n'
+    '<<<DATA>>>\n'
+    '<<<D2>>>\n'
+    '<<<JS>>>\n'
+    '</script>\n'
+    '</body>\n'
+    '</html>'
+)
 
-BODY_HTML = """ + repr(BODY_HTML) + """
+CSS = """ + repr(css) + """
 
-JS_LOGIC = """ + repr(JS_LOGIC) + """
+BODY_HTML = """ + repr(body_html) + """
 
-dashboard = f'''<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AllView Real Estate — Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<style>{CSS}</style>
-</head>
-<body>
-{BODY_HTML}
-<script>
-const DATA = {json.dumps(DATA)};
+JS_LOGIC = """ + repr(js_logic) + """
 
-const D2 = {json.dumps(D2)};
-
-{JS_LOGIC}
-</script>
-</body>
-</html>'''
+dashboard = (HTML_TEMPLATE
+    .replace('<<<CSS>>>',  CSS)
+    .replace('<<<BODY>>>', BODY_HTML)
+    .replace('<<<DATA>>>', 'const DATA = ' + json.dumps(DATA) + ';\n')
+    .replace('<<<D2>>>',   'const D2 = '   + json.dumps(D2)   + ';\n')
+    .replace('<<<JS>>>',   JS_LOGIC)
+)
 
 # ── SECTION 7: WRITE OUTPUT ───────────────────────────────────────────────────
 print("[7/8] Writing output file...")
 out_path = os.path.join(OUTPUT_DIR, 'index.html')
-with open(out_path, 'w') as f:
+with open(out_path, 'w', encoding='utf-8') as f:
     f.write(dashboard)
 
 size_kb = len(dashboard) / 1024
@@ -534,8 +544,8 @@ print(f"  Written: {out_path} ({size_kb:.0f} KB)")
 
 # ── SECTION 8: DONE ───────────────────────────────────────────────────────────
 print("[8/8] Done!")
-print("=" * 60)
-print(f"Dashboard built: {build_date}")
-print(f"Output:          {out_path}")
-print(f"Size:            {size_kb:.0f} KB")
-print("=" * 60)
+print('=' * 60)
+print(f'Dashboard built: {build_date}')
+print(f'Output:          {out_path}')
+print(f'Size:            {size_kb:.0f} KB')
+print('=' * 60)
