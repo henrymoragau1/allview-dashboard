@@ -251,12 +251,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="kpi" id="kpi-vacant"><div class="klbl">Vacant Units</div><div class="kval">65</div><div class="ksub">Vacant-Unrented</div><span class="kbdg br">4 Territories</span></div>
     <div class="kpi sge" id="kpi-lr-renewed"><div class="klbl">Leases Renewed</div><div class="kval">52</div><div class="ksub">vs 14 move-outs</div></div>
     <div class="kpi cor"><div class="klbl">Open Work Orders</div><div class="kval">450+</div><div class="ksub">Assigned / Scheduled</div></div>
-    <div class="kpi"><div class="klbl">Best NPS Territory</div><div class="kval">South OC</div><div class="ksub">Score: 94 avg</div><span class="kbdg bg">World-class</span></div>
-    <div class="kpi nvy"><div class="klbl">5-Star Review Lead</div><div class="kval">Ana</div><div class="ksub">11 reviews · 275 pts</div></div>
+    <div class="kpi"><div class="klbl">Best NPS Territory</div><div class="kval" id="kpi-best-nps-ter">South OC</div><div class="ksub" id="kpi-best-nps-score">Score: 83.0</div><span class="kbdg bg">World-class</span></div>
+    <div class="kpi nvy"><div class="klbl">5-Star Review Lead</div><div class="kval" id="kpi-top-reviewer-val">Daeyna</div><div class="ksub" id="kpi-top-reviewer-sub">47 reviews</div></div>
   </div>
   <div class="g2">
-    <div class="card"><div class="ctitle">Move-Ins vs Move-Outs</div><div class="csub">Monthly tenant flow · 2025</div><div class="cw"><canvas id="c-move"></canvas></div></div>
-    <div class="card"><div class="ctitle">Work Orders by Month</div><div class="csub">Total opened · 2025</div><div class="cw"><canvas id="c-wo"></canvas></div></div>
+    <div class="card"><div class="ctitle">Move-Ins vs Move-Outs</div><div class="csub">Monthly tenant flow · all data by month</div><div class="cw"><canvas id="c-move"></canvas></div></div>
+    <div class="card"><div class="ctitle">Work Orders by Month</div><div class="csub">Created / Closed / Opened · by month</div><div class="cw"><canvas id="c-wo"></canvas></div></div>
   </div>
   <div class="g12">
     <div class="card">
@@ -435,8 +435,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <p class="ptitle">Team Performance</p>
   <p class="psub" id="sub-team">5-star reviews, email response times, and leasing activity</p>
   <div class="krow">
-    <div class="kpi gld" id="kpi-top-reviewer"><div class="klbl">Top Reviewer</div><div class="kval">Ana</div><div class="ksub">11 reviews · 275 pts</div></div>
-    <div class="kpi" id="kpi-total-reviews"><div class="klbl">Total 5-Star Reviews</div><div class="kval">51</div><div class="ksub">Across all team members</div></div>
+    <div class="kpi gld" id="kpi-top-reviewer"><div class="klbl">Top Reviewer</div><div class="kval" id="kpi-top-reviewer-val">Daeyna</div><div class="ksub" id="kpi-top-reviewer-sub">47 reviews</div></div>
+    <div class="kpi" id="kpi-total-reviews"><div class="klbl">Total 5-Star Reviews</div><div class="kval">245</div><div class="ksub">Across all team members</div></div>
     <div class="kpi sge"><div class="klbl">Fastest Email Response</div><div class="kval">Mel</div><div class="ksub">40 min avg</div></div>
     <div class="kpi"><div class="klbl">Leases Renewed</div><div class="kval">1,092</div><div class="ksub">Jan–Jun 2025</div></div>
   </div>
@@ -539,16 +539,27 @@ function render() {
       {label:'Move-Outs',data:ters.map(ter=>lkwe('mo_we',we,ter,p)), backgroundColor:C.coral}
     ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
     mkChart('c-wo','bar',ters,[
-      {label:'Work Orders',data:ters.map(ter=>lkwe('wo_we',we,ter,p)),backgroundColor:C.sky,borderRadius:4}
-    ],{scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+      {label:'Created', data:ters.map(ter=>lkwe('wo_we',we,ter,p)),backgroundColor:C.sky,borderRadius:4}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
+       scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
   } else {
     mkChart('c-move','bar',MS,[
       {label:'Move-Ins', data:MONTHS.map(m=>lk('mi', y,m,t,p)), backgroundColor:C.sage},
       {label:'Move-Outs',data:MONTHS.map(m=>lk('mo', y,m,t,p)), backgroundColor:C.coral}
     ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
-    mkChart('c-wo','line',MS,[
-      {data:MONTHS.map(m=>lk('wo',y,m,t,p)),borderColor:C.sky,backgroundColor:C.skyL,tension:0.4,fill:true,pointRadius:4}
-    ],{scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+    mkChart('c-wo','bar',MS,[
+      {label:'Opened', type:'line',borderColor:C.coral,backgroundColor:'transparent',
+       borderWidth:2,pointRadius:4,tension:0.3,order:0,
+       data:MONTHS.map(m=>lk('wo_opened',y,m,t,p)),yAxisID:'y2'},
+      {label:'Created',backgroundColor:C.sky,  borderRadius:3,order:1,data:MONTHS.map(m=>lk('wo_created',y,m,t,p)),yAxisID:'y'},
+      {label:'Closed', backgroundColor:C.sage, borderRadius:3,order:2,data:MONTHS.map(m=>lk('wo_closed', y,m,t,p)),yAxisID:'y'}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
+       scales:{
+         x:{grid:{display:false}},
+         y:{position:'left',grid:{color:'#F0ECE4'},title:{display:true,text:'WO Count'}},
+         y2:{position:'right',grid:{display:false},title:{display:true,text:'Opened'},
+             ticks:{color:C.coral}}
+       }});
   }
 
   // ── Leases Renewed KPI — EOM logic, filter-aware ────────────────────
@@ -616,6 +627,27 @@ function render() {
   // ── NPS bars
   renderNPSBars('nps-bars-ov',  y, mo, t, p);
   renderNPSBars('nps-bars-sat', y, mo, t, p);
+
+  // ── Best NPS Territory KPI ─────────────────────────────────────────────
+  (function() {
+    const MIN_RESPONSES = 10;
+    const TERS = ['North OC','South OC','SD Properties','Commercial',
+                  'Brenden','Elderkin','STONE','Mid OC'];
+    // Build scores for current filter
+    let best = null; let bestScore = -999;
+    TERS.forEach(ter => {
+      // Use all-time key (no year/month) for territory-level NPS
+      const k = (y||'') + '|' + (mo||'') + '|' + ter + '|' + (p||'');
+      const score = DATA.nps[k];
+      if (score != null && score > bestScore) {
+        bestScore = score; best = ter;
+      }
+    });
+    const terEl   = document.getElementById('kpi-best-nps-ter');
+    const scoreEl = document.getElementById('kpi-best-nps-score');
+    if (terEl && best)   terEl.textContent   = best;
+    if (scoreEl && best) scoreEl.textContent = 'Score: ' + bestScore.toFixed(1);
+  })();
 
   // ── NPS trend
   const npsTers = t ? [t] : ['North OC','South OC','SD Properties','Commercial','Brenden'];
@@ -725,19 +757,26 @@ function renderStatic() {
     'Elderkin':'#E07B39','Brenden':'#9EAAAD','TBD':'#cccccc'
   };
 
-  // Get portfolio property counts for the same snapshot period
-  let portKey;
-  if (we) portKey = 'we:' + we;
-  else if (y && mo) portKey = 'eom:' + y + '|' + mo;
-  else if (mo) portKey = 'eom:|' + mo;
-  else if (y) portKey = 'eom:' + y + '|';
-  else portKey = 'eom:2026|June';
-  const portMap = D2.port_counts[portKey] || D2.port_counts['eom:|||'] || {};
+  // Resolve a single consistent key for BOTH vacancy and portfolio counts
+  // Same key is used for numerator (vac_donut2) and denominator (port_counts)
+  // This avoids WE-date mismatches between the two files
+  let snapKey;
+  if (we)          snapKey = 'we:'  + we;
+  else if (y && mo) snapKey = 'eom:' + y + '|' + mo;
+  else if (mo)      snapKey = 'eom:|' + mo;
+  else if (y)       snapKey = 'eom:' + y + '|';
+  else              snapKey = 'eom:|||';  // All years = weighted avg across all EOM months
+
+  const portMap   = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
+  const vacSnap   = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||']  || {};
+  const vacSnapFiltered = t
+    ? Object.fromEntries(Object.entries(vacSnap).filter(([k]) => k === t))
+    : vacSnap;
 
   // Build per-territory: vacPct = vacant / total_properties * 100
-  const vacLabels = Object.keys(vacTerMapFiltered)
-    .filter(k => k !== 'TBD' && k !== 'Mid OC' && vacTerMapFiltered[k] > 0);
-  const vacCounts = vacLabels.map(k => vacTerMapFiltered[k]);
+  const vacLabels = Object.keys(vacSnapFiltered)
+    .filter(k => k !== 'TBD' && k !== 'Mid OC' && vacSnapFiltered[k] > 0);
+  const vacCounts = vacLabels.map(k => vacSnapFiltered[k] || 0);
   const portTotals= vacLabels.map(k => portMap[k] || 0);
   const vacPcts   = vacLabels.map((k,i) =>
     portTotals[i] > 0 ? Math.round(vacCounts[i] / portTotals[i] * 1000) / 10 : null
@@ -802,7 +841,7 @@ function renderStatic() {
     subEl.textContent = 'Snapshot: ' + snapLabel + ' · sorted by days vacant';
   }
   // Update vacancy KPI: overall % + count
-  const totalVacUnrented = Object.entries(vacTerMapFiltered)
+  const totalVacUnrented = Object.entries(vacSnapFiltered)
     .filter(([k])=>k!=='TBD' && k!=='Mid OC').reduce((s,[,v])=>s+v,0);
   const totalPortfolio = Object.entries(portMap)
     .filter(([k])=>k!=='TBD').reduce((s,[,v])=>s+v,0);
@@ -1047,12 +1086,19 @@ function renderStatic() {
     const lbData = D2.review_lb[k] || D2.review_lb['|||'] || [];
     const rc = ['r1','r2','r3'];
     lbEl.innerHTML = lbData.slice(0,12).map((s,i)=>
-      `<div class="ldr-row"><div class="ldr-rank ${rc[i]||''}">${i+1}</div><div class="ldr-name">${s.n}</div><div style="text-align:right"><div class="ldr-score">${s.c}</div><div class="ldr-pts">${s.r}&#9733;</div></div></div>`
+      `<div class="ldr-row"><div class="ldr-rank ${rc[i]||''}">${i+1}</div><div class="ldr-name">${s.n}</div><div style="text-align:right"><div class="ldr-score">${s.c}</div><div class="ldr-pts">reviews</div></div></div>`
     ).join('');
     // Update KPIs
     if (lbData.length > 0) {
-      setKPI('#kpi-top-reviewer .kval', lbData[0].n.split(' ')[0]);
-      setKPI('#kpi-top-reviewer .ksub', lbData[0].c+' reviews · '+lbData[0].r+'★ avg');
+      // Update top reviewer KPI (both overview and team tab)
+      const topName = lbData[0].n.split(' ')[0];
+      const topCount = lbData[0].c + ' reviews';
+      ['kpi-top-reviewer-val','kpi-top-reviewer-val2'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.textContent=topName;
+      });
+      ['kpi-top-reviewer-sub','kpi-top-reviewer-sub2'].forEach(id=>{
+        const el=document.getElementById(id); if(el) el.textContent=topCount;
+      });
       const totalReviews = lbData.reduce((s,r)=>s+r.c,0);
       setKPI('#kpi-total-reviews .kval', totalReviews);
     }
