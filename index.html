@@ -132,6 +132,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <button class="tab"     id="t-satisfaction" onclick="show('satisfaction',this)">NPS &amp; Reviews</button>
   <button class="tab"     id="t-growth"       onclick="show('growth',this)">Business Dev</button>
   <button class="tab"     id="t-team"         onclick="show('team',this)">Team Performance</button>
+  <button class="tab" id="t-scorecard" onclick="show('scorecard',this)">EOS Score Card</button>
 </div>
 
 <div class="fbar">
@@ -1131,6 +1132,93 @@ function renderStatic() {
 
 
 
+
+// ── EOS SCORECARD ─────────────────────────────────────────────────────────────
+function renderScorecard() {
+  var tbody = document.getElementById('scorecard-tbody');
+  var tfoot = document.getElementById('scorecard-tfoot');
+  if (!tbody) return;
+
+  var y  = document.getElementById('fy').value;
+  var we = document.getElementById('fwe').value;
+
+  var rows = (D2.scorecard || []).slice();
+  if (y)  rows = rows.filter(function(r){ return r.we.indexOf(y) === 0; });
+  if (we) rows = rows.filter(function(r){ return r.we === we; });
+
+  // Color coding helper
+  function colorCell(val, good, fmt) {
+    if (val == null) return '<td style="text-align:right;color:#7A8694">—</td>';
+    var pass  = good(val);
+    var color = pass ? '#2E7D53' : '#B93B2E';
+    var bg    = pass ? '#E6F4EF' : '#FDECEA';
+    return '<td style="text-align:right;color:' + color + ';background:' + bg + ';font-weight:600">' + fmt(val) + '</td>';
+  }
+  function plainCell(val, fmt) {
+    return '<td style="text-align:right">' + (val == null ? '—' : fmt(val)) + '</td>';
+  }
+  function targetCell(txt) {
+    return '<td style="text-align:center;color:#7A8694;font-size:11px">' + txt + '</td>';
+  }
+  function fmt2(v)  { return v.toFixed(2) + '%'; }
+  function fmtd(v)  { return v.toFixed(1) + 'd'; }
+  function fmtR(v)  { return '$' + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  var html = '';
+  for (var i=0; i<rows.length; i++) {
+    var r = rows[i];
+    html += '<tr>';
+    html += '<td style="font-weight:600;white-space:nowrap">' + r.we + '</td>';
+    html += plainCell(r.unit_count, function(v){ return v.toLocaleString(); });
+    html += targetCell('≥ 40');
+    html += colorCell(r.nps,       function(v){ return v >= 40; },   function(v){ return v.toFixed(1); });
+    html += targetCell('≤ 40');
+    html += colorCell(r.opened_wo, function(v){ return v <= 40; },   function(v){ return v; });
+    html += targetCell('≥ $3,000');
+    html += colorCell(r.rent_unit, function(v){ return v >= 3000; }, fmtR);
+    html += targetCell('≤ 3%');
+    html += plainCell(r.vacant,    function(v){ return v; });
+    html += colorCell(r.vac_pct,   function(v){ return v <= 3; },    fmt2);
+    html += targetCell('≤ 80%');
+    html += colorCell(r.lr_pct,    function(v){ return v <= 80; },   fmt2);
+    html += targetCell('< 10d');
+    html += colorCell(r.unit_turn, function(v){ return v < 10; },    fmtd);
+    html += targetCell('≤ 1%');
+    html += colorCell(r.ar_pct,    function(v){ return v <= 1; },    fmt2);
+    html += '<td style="text-align:right;color:#D95C3A;font-weight:' + (r.concessions ? '600' : '400') + '">'
+          + (r.concessions ? '$' + r.concessions.toLocaleString() : '—') + '</td>';
+    html += '</tr>';
+  }
+  tbody.innerHTML = html;
+
+  // Totals row
+  if (rows.length > 0) {
+    function avg(key) {
+      var vals = rows.filter(function(r){ return r[key] != null; });
+      if (!vals.length) return null;
+      return vals.reduce(function(s,r){ return s + r[key]; }, 0) / vals.length;
+    }
+    var totCon = rows.reduce(function(s,r){ return s + r.concessions; }, 0);
+    var avgWO  = rows.reduce(function(s,r){ return s + r.opened_wo; }, 0) / rows.length;
+    var aN=avg('nps'), aR=avg('rent_unit'), aV=avg('vac_pct'),
+        aL=avg('lr_pct'), aU=avg('unit_turn'), aA=avg('ar_pct');
+    tfoot.innerHTML =
+      '<tr style="font-weight:700;background:#F5F0E8;border-top:2px solid #0D1B2A">'
+      + '<td>AVG/TOTAL</td>'
+      + '<td style="text-align:right">' + rows[rows.length-1].unit_count.toLocaleString() + '</td>'
+      + '<td></td><td style="text-align:right">' + (aN!=null?aN.toFixed(1):'—') + '</td>'
+      + '<td></td><td style="text-align:right">' + avgWO.toFixed(0) + '</td>'
+      + '<td></td><td style="text-align:right">' + (aR!=null?fmtR(aR):'—') + '</td>'
+      + '<td></td><td style="text-align:right">—</td>'
+      + '<td style="text-align:right">' + (aV!=null?aV.toFixed(2)+'%':'—') + '</td>'
+      + '<td></td><td style="text-align:right">' + (aL!=null?aL.toFixed(2)+'%':'—') + '</td>'
+      + '<td></td><td style="text-align:right">' + (aU!=null?aU.toFixed(1)+'d':'—') + '</td>'
+      + '<td></td><td style="text-align:right">' + (aA!=null?aA.toFixed(2)+'%':'—') + '</td>'
+      + '<td style="text-align:right;color:#D95C3A">$' + totCon.toLocaleString() + '</td>'
+      + '</tr>';
+  }
+}
+
 // ── TAB SWITCHING ─────────────────────────────────────
 function show(id, btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -1138,7 +1226,7 @@ function show(id, btn) {
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
   // Re-render charts now that the tab is visible
-  setTimeout(function(){ render(); renderStatic(); }, 50);
+  setTimeout(function(){ render(); renderStatic(); renderScorecard(); }, 50);
 }
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
@@ -1152,6 +1240,7 @@ function applyF() {
   document.getElementById('fbadge').style.display = any?'inline-block':'none';
   render();
   renderStatic();
+  renderScorecard();
 }
 
 function resetF() {
@@ -1169,7 +1258,43 @@ function resetF() {
 window.addEventListener('load', function() {
   render();
   renderStatic();
+  renderScorecard();
 });
 </script>
+
+<div class="page" id="scorecard">
+  <p class="ptitle">EOS Score Card</p>
+  <p class="psub">Weekly performance snapshot · all KPIs side by side</p>
+
+  <div style="overflow-x:auto;">
+  <table class="dt" id="scorecard-table" style="font-size:12px;min-width:1200px;">
+    <thead>
+      <tr>
+        <th>WE</th>
+        <th>Unit Count</th>
+        <th title="Target >= 40">Target NPS</th>
+        <th>NPS</th>
+        <th title="Target <= 40">Target Open WO</th>
+        <th>Opened WO</th>
+        <th title="Target >= $3,000">Target Rent/Unit</th>
+        <th>Rent/Unit</th>
+        <th title="Target <= 3%">Target Vacancy</th>
+        <th>Vacant Units</th>
+        <th>Vacancy %</th>
+        <th title="Target <= 80%">Target LR%</th>
+        <th>LR %</th>
+        <th title="Target < 10 Days">Target Unit Turn</th>
+        <th>Unit Turn</th>
+        <th title="Target <= 1%">Target AR%</th>
+        <th>AR %</th>
+        <th>Owner Concessions</th>
+      </tr>
+    </thead>
+    <tbody id="scorecard-tbody">
+    </tbody>
+    <tfoot id="scorecard-tfoot"></tfoot>
+  </table>
+  </div>
+</div>
 </body>
 </html>
