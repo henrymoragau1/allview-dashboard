@@ -102,42 +102,84 @@ print("[3/7] Computing DATA tables...")
 DATA = {}
 
 # Move In/Out
+# Count based on col X (Month) only — no year filter per user spec
+# Each row in col D (Event) = one move-in or move-out regardless of year
 mio_rows = read_sheet(FILES['move_inout'])
 mi_tbl=defaultdict(int); mo_tbl=defaultdict(int)
 mi_we=defaultdict(int);  mo_we=defaultdict(int)
 for r in mio_rows[1:]:
-    if not r or not r[0]: continue
+    if not r or not r[0] or len(r) < 24: continue
     attrs=resolve(r[0]) or {}
     ter=attrs.get('territory',''); prop=attrs.get('proptype','')
     event=str(r[3]).strip() if r[3] else ''
-    month=str(r[23]).strip() if r[23] else ''
-    year=str(r[22]).strip() if r[22] else ''
+    month=str(r[23]).strip() if r[23] else ''   # col X = Month (no year filter)
+    year=str(r[22]).strip() if r[22] else ''     # col W = Year (kept for WE filter)
     we=r[24].strftime('%Y-%m-%d') if r[24] and hasattr(r[24],'strftime') else ''
-    tbl=mi_tbl if event=='Move-in' else mo_tbl if event=='Move-out' else None
-    if tbl is None: continue
-    for k in agg_keys(year,month,ter,prop): tbl[k]+=1
+    if event not in ('Move-in','Move-out'): continue
+    tbl=mi_tbl if event=='Move-in' else mo_tbl
+    # Month-only keys (no year) — matches user's manual count
+    for k in [f"|{month}|{ter}|{prop}", f"|{month}|{ter}|",
+              f"|{month}||{prop}",       f"|{month}||"]:
+        tbl[k] += 1
+    # Year+month keys for year filter
+    if year:
+        for k in [f"{year}|{month}|{ter}|{prop}", f"{year}|{month}|{ter}|",
+                  f"{year}|{month}||{prop}",       f"{year}|{month}||",
+                  f"{year}||{ter}|{prop}",          f"{year}||{ter}|",
+                  f"{year}|||{prop}",               f"{year}|||"]:
+            tbl[k] += 1
+    # All-time rollup
+    for k in [f"||{ter}|{prop}", f"||{ter}|", f"|||{prop}", "|||"]:
+        tbl[k] += 1
+    # WE level
     wt=mi_we if event=='Move-in' else mo_we
     if we:
         wt[f"{we}|{ter}|{prop}"]+=1; wt[f"{we}|{ter}|"]+=1; wt[f"{we}||"]+=1
 DATA['mi']=dict(mi_tbl); DATA['mo']=dict(mo_tbl)
 DATA['mi_we']=dict(mi_we); DATA['mo_we']=dict(mo_we)
 
-# Work Orders
+# Work Orders — Created, Closed, Opened
+# Created = col 14 Created At date
+# Closed  = col 24 Completed On date
+# Opened  = col 48 Opened WO = 1, grouped by col 42/43 Year/Month
 wo_rows=read_sheet(FILES['work_orders'])
-wo_tbl=defaultdict(int); wo_we_tbl=defaultdict(int)
+wo_created=defaultdict(int); wo_closed=defaultdict(int)
+wo_opened=defaultdict(int);  wo_we_tbl=defaultdict(int)
+
 for r in wo_rows[1:]:
     if not r or not r[0]: continue
     attrs=resolve(r[0]) or {}
     ter=attrs.get('territory',''); prop=attrs.get('proptype','')
-    month=str(r[43]).strip() if r[43] else ''
-    year=str(r[42]).strip() if r[42] else ''
     we=r[44].strftime('%Y-%m-%d') if len(r)>44 and r[44] and hasattr(r[44],'strftime') else ''
-    for k in agg_keys(year,month,ter,prop): wo_tbl[k]+=1
+
+    # CREATED — by Created At date (col 14)
+    if r[14] and hasattr(r[14],'strftime'):
+        yr=r[14].strftime('%Y'); mo=r[14].strftime('%B')
+        for k in agg_keys(yr,mo,ter,prop): wo_created[k]+=1
+
+    # CLOSED — by Completed On date (col 24)
+    if r[24] and hasattr(r[24],'strftime'):
+        yr=r[24].strftime('%Y'); mo=r[24].strftime('%B')
+        for k in agg_keys(yr,mo,ter,prop): wo_closed[k]+=1
+
+    # OPENED — col 48 = 1, by Year/Month cols
+    if len(r)>48 and r[48] and str(r[48]).strip()=='1':
+        yr=str(r[42]).strip() if r[42] else ''
+        mo=str(r[43]).strip() if r[43] else ''
+        if yr and mo:
+            for k in agg_keys(yr,mo,ter,prop): wo_opened[k]+=1
+
+    # WE level (created date)
     if we:
         wo_we_tbl[f"{we}|{ter}|{prop}"]+=1
         wo_we_tbl[f"{we}|{ter}|"]+=1
         wo_we_tbl[f"{we}||"]+=1
-DATA['wo']=dict(wo_tbl); DATA['wo_we']=dict(wo_we_tbl)
+
+DATA['wo']=dict(wo_created)   # keep 'wo' key for WO KPI total
+DATA['wo_created']=dict(wo_created)
+DATA['wo_closed']=dict(wo_closed)
+DATA['wo_opened']=dict(wo_opened)
+DATA['wo_we']=dict(wo_we_tbl)
 
 # Lease Renewal (EOM)
 lr_rows=read_sheet(FILES['lr'])
