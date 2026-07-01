@@ -3,7 +3,7 @@ build.py - AllView Real Estate Dashboard Builder
 Reads Excel files from ./data/, outputs ./output/index.html
 """
 
-import os, re, sys, json, datetime
+import os, re, sys, json, datetime, datetime
 import openpyxl
 from collections import defaultdict
 
@@ -482,6 +482,207 @@ D2['bdm_status']={k:dict(v) for k,v in bdm_st.items()}
 D2['bdm_source']={k:dict(v) for k,v in bdm_src.items()}
 D2['bdm_all']=bdm_all
 print(f"  D2: {list(D2.keys())}")
+
+
+# ── PORT_PT / VAC_PT (proptype breakdown for vacancy filter) ──────────────────
+print("[4b/7] Computing port_pt and vac_pt...")
+
+vac_rate_data=read_sheet(FILES['vacancy'],'Vacancy Rate')
+ter_map1_data=read_sheet(FILES['vacancy'],'Territory Mapping1')
+addr_ter_map={str(r[0]).strip():str(r[1]).strip() for r in ter_map1_data[1:] if r and r[0] and r[1]}
+
+def get_vac_ter_full(r):
+    addr=str(r[15]).strip() if r[15] else str(r[0]).strip()
+    res=(resolve(addr) or {}).get('territory','')
+    if res and res not in SKIP_TERS: return res
+    ter=str(r[25]).strip() if r[25] else ''
+    if ter and ter not in SKIP_TERS: return ter
+    m=addr_ter_map.get(addr,'')
+    return m if m not in SKIP_TERS else ''
+
+port_we_ter_pt=defaultdict(lambda:defaultdict(lambda:defaultdict(int)))
+for r in port_rows[1:]:
+    if not r or not r[13] or not hasattr(r[13],'strftime'): continue
+    ter=str(r[6]).strip() if r[6] else ''
+    pt=str(r[5]).strip() if r[5] else ''
+    if ter in SKIP_TERS: continue
+    port_we_ter_pt[r[13].strftime('%Y-%m-%d')][ter][pt]+=1
+
+vac_we_ter_pt=defaultdict(lambda:defaultdict(lambda:defaultdict(int)))
+for r in vac_rate_data[1:]:
+    if not r or not r[18] or not hasattr(r[18],'strftime'): continue
+    if str(r[2]).strip()!='Vacant-Unrented': continue
+    ter=get_vac_ter_full(r)
+    if ter in SKIP_TERS: continue
+    addr=str(r[15]).strip() if r[15] else str(r[0]).strip()
+    pt=(resolve(addr) or {}).get('proptype','')
+    vac_we_ter_pt[r[18].strftime('%Y-%m-%d')][ter][pt]+=1
+
+D2['port_pt']={k:{t:dict(v) for t,v in tv.items()} for k,tv in port_we_ter_pt.items()}
+D2['vac_pt'] ={k:{t:dict(v) for t,v in tv.items()} for k,tv in vac_we_ter_pt.items()}
+
+# ── WEEKLY OVERVIEW SCORECARD ─────────────────────────────────────────────────
+print("[4c/7] Computing Weekly Overview scorecard...")
+
+# NPS cumulative up to each WE
+nps_rows2=read_sheet(FILES['new_nps'])
+nps_raw_we=defaultdict(lambda:{'p':0,'d':0,'t':0})
+for r in nps_rows2[1:]:
+    if not r or not r[35] or not hasattr(r[35],'strftime'): continue
+    p=1 if r[39]==1 else 0; d=1 if r[41]==1 else 0; pa=1 if r[40]==1 else 0
+    t=p+pa+d
+    if t==0: continue
+    nps_raw_we[r[35].strftime('%Y-%m-%d')]['p']+=p
+    nps_raw_we[r[35].strftime('%Y-%m-%d')]['d']+=d
+    nps_raw_we[r[35].strftime('%Y-%m-%d')]['t']+=t
+nps_cum={}; cp=0; cd=0; ct=0; last_nps=None
+for we in sorted(nps_raw_we.keys()):
+    v=nps_raw_we[we]; cp+=v['p']; cd+=v['d']; ct+=v['t']
+    last_nps=round((cp-cd)/ct*100,1) if ct else None
+    nps_cum[we]=last_nps
+
+# Unit turn cumulative (blank comment only, include 0-day)
+ut_rows2=read_sheet(FILES['unit_turn'],'Unit Turn Details')
+ut_raw_we=defaultdict(list)
+for r in ut_rows2[1:]:
+    if not r or r[17] is None: continue
+    if r[16] is not None and str(r[16]).strip()!='': continue
+    days=r[17] if isinstance(r[17],(int,float)) else 0
+    if r[21] and hasattr(r[21],'strftime'):
+        ut_raw_we[r[21].strftime('%Y-%m-%d')].append(days)
+ut_cum={}; ut_s=0; ut_c=0
+for we in sorted(ut_raw_we.keys()):
+    for d in ut_raw_we[we]: ut_s+=d; ut_c+=1
+    ut_cum[we]=round(ut_s/ut_c,2) if ut_c else None
+
+# LR% per WE (all WEs, no EOM restriction)
+lr_rows2=read_sheet(FILES['lr'])
+lr_we=defaultdict(lambda:{'R':0,'M':0})
+for r in lr_rows2[1:]:
+    if not r or not r[16] or not hasattr(r[16],'strftime'): continue
+    status=str(r[10]).strip() if r[10] else ''
+    we_str=r[16].strftime('%Y-%m-%d')
+    if status=='Renewed': lr_we[we_str]['R']+=1
+    elif status in ('Move-Out','Changed to MTM'): lr_we[we_str]['M']+=1
+lr_pct_we={we:round(v['R']/(v['R']+v['M'])*100,2) for we,v in lr_we.items() if (v['R']+v['M'])>0}
+
+# AR% per EOM WE
+up_rows2=read_sheet(FILES['unpaid'])
+up_eom2=eom_we_map(up_rows2,15,14,16)
+up_by_eom=defaultdict(float)
+for r in up_rows2[1:]:
+    if not r or not r[16] or not hasattr(r[16],'strftime'): continue
+    yr=str(r[15]).strip(); mo=str(r[14]).strip(); we=r[16]
+    if up_eom2.get((yr,mo))!=we: continue
+    amt=r[8] if isinstance(r[8],(int,float)) and r[8] and r[8]>0 else 0
+    if amt>0: up_by_eom[we.strftime('%Y-%m-%d')]+=amt
+rr_rows2=read_sheet(FILES['rent_roll'])
+rr_by_we2=defaultdict(float)
+for r in rr_rows2[1:]:
+    if not r or not r[0]: continue
+    we=r[21] if len(r)>21 and r[21] and hasattr(r[21],'strftime') else None
+    if not we: continue
+    rent=r[9] if isinstance(r[9],(int,float)) and r[9] and r[9]>0 else 0
+    rr_by_we2[we.strftime('%Y-%m-%d')]+=rent
+ar_pct_we2={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if rr_by_we2.get(we,0)>0}
+
+# Showing conversion from guest card
+gc_rows=read_sheet(os.path.join(DATA_DIR,'guest_card_inquiries-Performance.xlsx'))
+gc_we=defaultdict(lambda:{'total':0,'with_showing':0})
+for r in gc_rows[1:]:
+    if not r or not r[15] or not hasattr(r[15],'strftime'): continue
+    we_str=r[15].strftime('%Y-%m-%d')
+    gc_we[we_str]['total']+=1
+    showings=r[5] if isinstance(r[5],(int,float)) else 0
+    if showings>0: gc_we[we_str]['with_showing']+=1
+show_conv_we={we:round(v['with_showing']/v['total']*100,2) for we,v in gc_we.items() if v['total']>0}
+
+# Vacancy $ Loss Rate (Posted=Yes, col AA posted_at, monthly reset, mgmt_fee)
+mgmt_fee_map={}
+for r in port_rows[1:]:
+    if not r or not r[0]: continue
+    addr=str(r[0]).strip(); fee=r[14]
+    if isinstance(fee,(int,float)) and fee>0:
+        mgmt_fee_map[addr]=fee
+        mgmt_fee_map[addr.split(',')[0].strip().lower()]=fee
+def get_fee(addr):
+    addr=str(addr).strip()
+    return mgmt_fee_map.get(addr, mgmt_fee_map.get(addr.split(',')[0].strip().lower(), 0.089))
+
+vac_rate3=read_sheet(FILES['vacancy'],'Vacancy Rate')
+port_cnt_we=defaultdict(int)
+for r in port_rows[1:]:
+    if not r or not r[13] or not hasattr(r[13],'strftime'): continue
+    ter=str(r[6]).strip() if r[6] else ''
+    if ter in SKIP_TERS: continue
+    port_cnt_we[r[13].strftime('%Y-%m-%d')]+=1
+
+vac_cnt_we=defaultdict(int)
+vac_loss_we=defaultdict(float)
+for r in vac_rate3[1:]:
+    if not r or not r[18] or not hasattr(r[18],'strftime'): continue
+    if str(r[2]).strip()!='Vacant-Unrented': continue
+    ter=get_vac_ter_full(r)
+    if ter in SKIP_TERS: continue
+    we_dt=r[18]; we_str=we_dt.strftime('%Y-%m-%d')
+    vac_cnt_we[we_str]+=1
+    if str(r[14]).strip()!='Yes': continue
+    if not r[26] or not hasattr(r[26],'strftime'): continue
+    sched=r[6] if isinstance(r[6],(int,float)) and r[6]>0 else 0
+    if sched==0: continue
+    prop_addr=str(r[15]).strip() if r[15] else str(r[0]).strip()
+    fee=get_fee(prop_addr)
+    month_start=we_dt.replace(day=1)
+    start=max(r[26], month_start)
+    days=(we_dt-start).days+1
+    if days<=0: continue
+    vac_loss_we[we_str]+=round(days*(sched/30)*fee,2)
+
+# Vacancy rate per WE
+vac_rate_we={we:round(vac_cnt_we[we]/port_cnt_we[we]*100,2) if port_cnt_we.get(we) else 0 for we in vac_cnt_we}
+
+# Build Weekly Overview (scorecard) rows - all territories combined
+from datetime import timedelta
+all_sc_we=sorted(set(list(vac_cnt_we.keys())+list(nps_cum.keys())+list(lr_pct_we.keys())))
+scorecard_rows=[]
+last_nps_v=None
+for we in all_sc_we:
+    we_dt=datetime.datetime.strptime(we,'%Y-%m-%d')
+    unit_count=port_cnt_we.get(we,0)
+    vacant=vac_cnt_we.get(we,0)
+    vac_pct=round(vacant/unit_count*100,2) if unit_count else 0
+    if we in nps_cum: last_nps_v=nps_cum[we]
+    scorecard_rows.append({
+        'we':we,'territory':'','proptype':'',
+        'unit_count':unit_count,'vacant':vacant,'vac_pct':vac_pct,
+        'nps':last_nps_v,
+        'opened_wo':0,'rent_unit':None,'lr_pct':lr_pct_we.get(we),
+        'unit_turn':ut_cum.get(we),'ar_pct':ar_pct_we2.get(we),'concessions':0,
+    })
+D2['scorecard']=scorecard_rows
+
+# Build EOS rows
+from datetime import timedelta as td
+eos_rows=[]
+last_nps_v=None
+for we in all_sc_we:
+    we_dt2=datetime.datetime.strptime(we,'%Y-%m-%d')
+    prev_dt=we_dt2-td(days=6)
+    label=f"{prev_dt.strftime('%-m/%-d')} to {we_dt2.strftime('%-m/%-d')}"
+    if we in nps_cum: last_nps_v=nps_cum[we]
+    sc=show_conv_we.get(we)
+    eos_rows.append({
+        'we':we,'label':label,
+        'nps':last_nps_v,
+        'lr_pct':lr_pct_we.get(we),
+        'unit_turn':ut_cum.get(we),
+        'ar_pct':ar_pct_we2.get(we),
+        'show_conv':sc,
+        'vac_loss':round(vac_loss_we.get(we,0),2),
+        'vac_rate':vac_rate_we.get(we),
+    })
+D2['eos']=eos_rows
+print(f"  scorecard rows: {len(scorecard_rows)}, eos rows: {len(eos_rows)}")
 
 print("[5/7] Reading HTML template...")
 if not os.path.exists(TEMPLATE_PATH):
