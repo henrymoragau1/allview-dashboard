@@ -117,6 +117,28 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 
 @media(max-width:1000px){.g2,.g3,.g12{grid-template-columns:1fr;}.fgrid{grid-template-columns:1fr;}}
 
+
+/* ── MULTI-SELECT FILTER ──────────────────────────── */
+.msel-wrap{position:relative;display:inline-block;}
+.msel-btn{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;
+  color:var(--navy);background:var(--light);border:1px solid var(--border);
+  border-radius:6px;padding:6px 26px 6px 10px;cursor:pointer;white-space:nowrap;
+  min-width:120px;text-align:left;position:relative;}
+.msel-btn:hover{border-color:var(--sky);}
+.msel-btn.act{border-color:var(--sky);background:#EAF4FB;color:var(--sky);font-weight:600;}
+.msel-arrow{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:var(--muted);}
+.msel-drop{display:none;position:absolute;top:calc(100% + 4px);left:0;
+  background:#fff;border:1px solid var(--border);border-radius:8px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:999;min-width:180px;
+  max-height:260px;overflow-y:auto;padding:8px 0;}
+.msel-drop-tall{max-height:340px;}
+.msel-drop.open{display:block;}
+.msel-drop label{display:flex;align-items:center;gap:8px;padding:5px 14px;
+  font-size:12px;cursor:pointer;color:var(--text);}
+.msel-drop label:hover{background:var(--sand);}
+.msel-drop label input[type=checkbox]{width:14px;height:14px;accent-color:var(--sky);cursor:pointer;flex-shrink:0;}
+.msel-all{font-weight:600!important;color:var(--navy)!important;}
+.msel-drop hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
 </style>
 </head>
 <body>
@@ -132,112 +154,171 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <button class="tab"     id="t-satisfaction" onclick="show('satisfaction',this)">NPS &amp; Reviews</button>
   <button class="tab"     id="t-growth"       onclick="show('growth',this)">Business Dev</button>
   <button class="tab"     id="t-team"         onclick="show('team',this)">Team Performance</button>
-  <button class="tab" id="t-scorecard" onclick="show('scorecard',this)">EOS Score Card</button>
+  <button class="tab" id="t-scorecard" onclick="show('scorecard',this)">Weekly Overview</button>
+  <button class="tab" id="t-eos" onclick="show('eos',this)">EOS Score Card</button>
 </div>
 
 <div class="fbar">
   <span class="flabel">Filters</span>
-  <select class="fsel" id="fy" onchange="applyF()">
-    <option value="">All Years</option>
-    <option value="2025">2025</option>
-    <option value="2026">2026</option>
-  </select>
-  <select class="fsel" id="fm" onchange="applyF()">
-    <option value="">All Months</option>
-    <option>January</option><option>February</option><option>March</option><option>April</option>
-    <option>May</option><option>June</option><option>July</option><option>August</option>
-    <option>September</option><option>October</option><option>November</option><option>December</option>
-  </select>
-  <select class="fsel" id="fwe" onchange="applyF()">
-    <option value="">All WE Dates</option>
-    <option value="2025-01-05">2025-01-05</option>
-<option value="2025-01-12">2025-01-12</option>
-<option value="2025-01-19">2025-01-19</option>
-<option value="2025-01-26">2025-01-26</option>
-<option value="2025-02-02">2025-02-02</option>
-<option value="2025-02-09">2025-02-09</option>
-<option value="2025-02-16">2025-02-16</option>
-<option value="2025-02-23">2025-02-23</option>
-<option value="2025-03-02">2025-03-02</option>
-<option value="2025-03-09">2025-03-09</option>
-<option value="2025-03-16">2025-03-16</option>
-<option value="2025-03-23">2025-03-23</option>
-<option value="2025-03-30">2025-03-30</option>
-<option value="2025-04-06">2025-04-06</option>
-<option value="2025-04-13">2025-04-13</option>
-<option value="2025-04-20">2025-04-20</option>
-<option value="2025-04-27">2025-04-27</option>
-<option value="2025-05-04">2025-05-04</option>
-<option value="2025-05-11">2025-05-11</option>
-<option value="2025-05-18">2025-05-18</option>
-<option value="2025-05-25">2025-05-25</option>
-<option value="2025-06-01">2025-06-01</option>
-<option value="2025-06-08">2025-06-08</option>
-<option value="2025-06-15">2025-06-15</option>
-<option value="2025-06-22">2025-06-22</option>
-<option value="2025-06-29">2025-06-29</option>
-<option value="2025-07-06">2025-07-06</option>
-<option value="2025-07-13">2025-07-13</option>
-<option value="2025-07-20">2025-07-20</option>
-<option value="2025-07-27">2025-07-27</option>
-<option value="2025-08-03">2025-08-03</option>
-<option value="2025-08-10">2025-08-10</option>
-<option value="2025-08-17">2025-08-17</option>
-<option value="2025-08-24">2025-08-24</option>
-<option value="2025-08-31">2025-08-31</option>
-<option value="2025-09-07">2025-09-07</option>
-<option value="2025-09-14">2025-09-14</option>
-<option value="2025-09-21">2025-09-21</option>
-<option value="2025-09-28">2025-09-28</option>
-<option value="2025-10-05">2025-10-05</option>
-<option value="2025-10-12">2025-10-12</option>
-<option value="2025-10-19">2025-10-19</option>
-<option value="2025-10-26">2025-10-26</option>
-<option value="2025-11-02">2025-11-02</option>
-<option value="2025-11-09">2025-11-09</option>
-<option value="2025-11-16">2025-11-16</option>
-<option value="2025-11-23">2025-11-23</option>
-<option value="2025-11-30">2025-11-30</option>
-<option value="2025-12-07">2025-12-07</option>
-<option value="2025-12-14">2025-12-14</option>
-<option value="2025-12-21">2025-12-21</option>
-<option value="2025-12-28">2025-12-28</option>
-<option value="2026-01-04">2026-01-04</option>
-<option value="2026-01-11">2026-01-11</option>
-<option value="2026-01-18">2026-01-18</option>
-<option value="2026-01-25">2026-01-25</option>
-<option value="2026-02-01">2026-02-01</option>
-<option value="2026-02-08">2026-02-08</option>
-<option value="2026-02-15">2026-02-15</option>
-<option value="2026-02-22">2026-02-22</option>
-<option value="2026-03-01">2026-03-01</option>
-<option value="2026-03-08">2026-03-08</option>
-<option value="2026-03-15">2026-03-15</option>
-<option value="2026-03-22">2026-03-22</option>
-<option value="2026-03-29">2026-03-29</option>
-<option value="2026-04-05">2026-04-05</option>
-<option value="2026-04-12">2026-04-12</option>
-<option value="2026-04-19">2026-04-19</option>
-<option value="2026-04-26">2026-04-26</option>
-<option value="2026-05-03">2026-05-03</option>
-<option value="2026-05-10">2026-05-10</option>
-<option value="2026-05-17">2026-05-17</option>
-<option value="2026-05-24">2026-05-24</option>
-<option value="2026-05-31">2026-05-31</option>
-<option value="2026-06-07">2026-06-07</option>
-<option value="2026-06-14">2026-06-14</option>
-<option value="2026-06-21">2026-06-21</option>
-  </select>
+
+  <!-- YEAR multi-select -->
+  <div class="msel-wrap" id="wrap-year">
+    <button class="msel-btn" onclick="toggleDrop('year')" id="btn-year">
+      All Years <span class="msel-arrow">▾</span>
+    </button>
+    <div class="msel-drop" id="drop-year">
+      <label class="msel-all"><input type="checkbox" id="chk-year-all" checked onchange="toggleAll('year')"> All Years</label>
+      <hr>
+      <label><input type="checkbox" class="chk-year" value="2025" onchange="applyF()"> 2025</label>
+      <label><input type="checkbox" class="chk-year" value="2026" onchange="applyF()"> 2026</label>
+    </div>
+  </div>
+
+  <!-- MONTH multi-select -->
+  <div class="msel-wrap" id="wrap-month">
+    <button class="msel-btn" onclick="toggleDrop('month')" id="btn-month">
+      All Months <span class="msel-arrow">▾</span>
+    </button>
+    <div class="msel-drop" id="drop-month">
+      <label class="msel-all"><input type="checkbox" id="chk-month-all" checked onchange="toggleAll('month')"> All Months</label>
+      <hr>
+      <label><input type="checkbox" class="chk-month" value="January"   onchange="applyF()"> January</label>
+      <label><input type="checkbox" class="chk-month" value="February"  onchange="applyF()"> February</label>
+      <label><input type="checkbox" class="chk-month" value="March"     onchange="applyF()"> March</label>
+      <label><input type="checkbox" class="chk-month" value="April"     onchange="applyF()"> April</label>
+      <label><input type="checkbox" class="chk-month" value="May"       onchange="applyF()"> May</label>
+      <label><input type="checkbox" class="chk-month" value="June"      onchange="applyF()"> June</label>
+      <label><input type="checkbox" class="chk-month" value="July"      onchange="applyF()"> July</label>
+      <label><input type="checkbox" class="chk-month" value="August"    onchange="applyF()"> August</label>
+      <label><input type="checkbox" class="chk-month" value="September" onchange="applyF()"> September</label>
+      <label><input type="checkbox" class="chk-month" value="October"   onchange="applyF()"> October</label>
+      <label><input type="checkbox" class="chk-month" value="November"  onchange="applyF()"> November</label>
+      <label><input type="checkbox" class="chk-month" value="December"  onchange="applyF()"> December</label>
+    </div>
+  </div>
+
+  <!-- WE multi-select -->
+  <div class="msel-wrap" id="wrap-we">
+    <button class="msel-btn" onclick="toggleDrop('we')" id="btn-we">
+      All WE Dates <span class="msel-arrow">▾</span>
+    </button>
+    <div class="msel-drop msel-drop-tall" id="drop-we">
+      <label class="msel-all"><input type="checkbox" id="chk-we-all" checked onchange="toggleAll('we')"> All WE Dates</label>
+      <hr>
+      <label><input type="checkbox" class="chk-we" value="2025-01-05" onchange="applyF()"> 2025-01-05</label>
+<label><input type="checkbox" class="chk-we" value="2025-01-12" onchange="applyF()"> 2025-01-12</label>
+<label><input type="checkbox" class="chk-we" value="2025-01-19" onchange="applyF()"> 2025-01-19</label>
+<label><input type="checkbox" class="chk-we" value="2025-01-26" onchange="applyF()"> 2025-01-26</label>
+<label><input type="checkbox" class="chk-we" value="2025-02-02" onchange="applyF()"> 2025-02-02</label>
+<label><input type="checkbox" class="chk-we" value="2025-02-09" onchange="applyF()"> 2025-02-09</label>
+<label><input type="checkbox" class="chk-we" value="2025-02-16" onchange="applyF()"> 2025-02-16</label>
+<label><input type="checkbox" class="chk-we" value="2025-02-23" onchange="applyF()"> 2025-02-23</label>
+<label><input type="checkbox" class="chk-we" value="2025-03-02" onchange="applyF()"> 2025-03-02</label>
+<label><input type="checkbox" class="chk-we" value="2025-03-09" onchange="applyF()"> 2025-03-09</label>
+<label><input type="checkbox" class="chk-we" value="2025-03-16" onchange="applyF()"> 2025-03-16</label>
+<label><input type="checkbox" class="chk-we" value="2025-03-23" onchange="applyF()"> 2025-03-23</label>
+<label><input type="checkbox" class="chk-we" value="2025-03-30" onchange="applyF()"> 2025-03-30</label>
+<label><input type="checkbox" class="chk-we" value="2025-04-06" onchange="applyF()"> 2025-04-06</label>
+<label><input type="checkbox" class="chk-we" value="2025-04-13" onchange="applyF()"> 2025-04-13</label>
+<label><input type="checkbox" class="chk-we" value="2025-04-20" onchange="applyF()"> 2025-04-20</label>
+<label><input type="checkbox" class="chk-we" value="2025-04-27" onchange="applyF()"> 2025-04-27</label>
+<label><input type="checkbox" class="chk-we" value="2025-05-04" onchange="applyF()"> 2025-05-04</label>
+<label><input type="checkbox" class="chk-we" value="2025-05-11" onchange="applyF()"> 2025-05-11</label>
+<label><input type="checkbox" class="chk-we" value="2025-05-18" onchange="applyF()"> 2025-05-18</label>
+<label><input type="checkbox" class="chk-we" value="2025-05-25" onchange="applyF()"> 2025-05-25</label>
+<label><input type="checkbox" class="chk-we" value="2025-06-01" onchange="applyF()"> 2025-06-01</label>
+<label><input type="checkbox" class="chk-we" value="2025-06-08" onchange="applyF()"> 2025-06-08</label>
+<label><input type="checkbox" class="chk-we" value="2025-06-15" onchange="applyF()"> 2025-06-15</label>
+<label><input type="checkbox" class="chk-we" value="2025-06-22" onchange="applyF()"> 2025-06-22</label>
+<label><input type="checkbox" class="chk-we" value="2025-06-29" onchange="applyF()"> 2025-06-29</label>
+<label><input type="checkbox" class="chk-we" value="2025-07-06" onchange="applyF()"> 2025-07-06</label>
+<label><input type="checkbox" class="chk-we" value="2025-07-13" onchange="applyF()"> 2025-07-13</label>
+<label><input type="checkbox" class="chk-we" value="2025-07-20" onchange="applyF()"> 2025-07-20</label>
+<label><input type="checkbox" class="chk-we" value="2025-07-27" onchange="applyF()"> 2025-07-27</label>
+<label><input type="checkbox" class="chk-we" value="2025-08-03" onchange="applyF()"> 2025-08-03</label>
+<label><input type="checkbox" class="chk-we" value="2025-08-10" onchange="applyF()"> 2025-08-10</label>
+<label><input type="checkbox" class="chk-we" value="2025-08-17" onchange="applyF()"> 2025-08-17</label>
+<label><input type="checkbox" class="chk-we" value="2025-08-24" onchange="applyF()"> 2025-08-24</label>
+<label><input type="checkbox" class="chk-we" value="2025-08-31" onchange="applyF()"> 2025-08-31</label>
+<label><input type="checkbox" class="chk-we" value="2025-09-07" onchange="applyF()"> 2025-09-07</label>
+<label><input type="checkbox" class="chk-we" value="2025-09-14" onchange="applyF()"> 2025-09-14</label>
+<label><input type="checkbox" class="chk-we" value="2025-09-21" onchange="applyF()"> 2025-09-21</label>
+<label><input type="checkbox" class="chk-we" value="2025-09-28" onchange="applyF()"> 2025-09-28</label>
+<label><input type="checkbox" class="chk-we" value="2025-10-05" onchange="applyF()"> 2025-10-05</label>
+<label><input type="checkbox" class="chk-we" value="2025-10-12" onchange="applyF()"> 2025-10-12</label>
+<label><input type="checkbox" class="chk-we" value="2025-10-19" onchange="applyF()"> 2025-10-19</label>
+<label><input type="checkbox" class="chk-we" value="2025-10-26" onchange="applyF()"> 2025-10-26</label>
+<label><input type="checkbox" class="chk-we" value="2025-11-02" onchange="applyF()"> 2025-11-02</label>
+<label><input type="checkbox" class="chk-we" value="2025-11-09" onchange="applyF()"> 2025-11-09</label>
+<label><input type="checkbox" class="chk-we" value="2025-11-16" onchange="applyF()"> 2025-11-16</label>
+<label><input type="checkbox" class="chk-we" value="2025-11-23" onchange="applyF()"> 2025-11-23</label>
+<label><input type="checkbox" class="chk-we" value="2025-11-30" onchange="applyF()"> 2025-11-30</label>
+<label><input type="checkbox" class="chk-we" value="2025-12-07" onchange="applyF()"> 2025-12-07</label>
+<label><input type="checkbox" class="chk-we" value="2025-12-14" onchange="applyF()"> 2025-12-14</label>
+<label><input type="checkbox" class="chk-we" value="2025-12-21" onchange="applyF()"> 2025-12-21</label>
+<label><input type="checkbox" class="chk-we" value="2025-12-28" onchange="applyF()"> 2025-12-28</label>
+<label><input type="checkbox" class="chk-we" value="2026-01-04" onchange="applyF()"> 2026-01-04</label>
+<label><input type="checkbox" class="chk-we" value="2026-01-11" onchange="applyF()"> 2026-01-11</label>
+<label><input type="checkbox" class="chk-we" value="2026-01-18" onchange="applyF()"> 2026-01-18</label>
+<label><input type="checkbox" class="chk-we" value="2026-01-25" onchange="applyF()"> 2026-01-25</label>
+<label><input type="checkbox" class="chk-we" value="2026-02-01" onchange="applyF()"> 2026-02-01</label>
+<label><input type="checkbox" class="chk-we" value="2026-02-08" onchange="applyF()"> 2026-02-08</label>
+<label><input type="checkbox" class="chk-we" value="2026-02-15" onchange="applyF()"> 2026-02-15</label>
+<label><input type="checkbox" class="chk-we" value="2026-02-22" onchange="applyF()"> 2026-02-22</label>
+<label><input type="checkbox" class="chk-we" value="2026-03-01" onchange="applyF()"> 2026-03-01</label>
+<label><input type="checkbox" class="chk-we" value="2026-03-08" onchange="applyF()"> 2026-03-08</label>
+<label><input type="checkbox" class="chk-we" value="2026-03-15" onchange="applyF()"> 2026-03-15</label>
+<label><input type="checkbox" class="chk-we" value="2026-03-22" onchange="applyF()"> 2026-03-22</label>
+<label><input type="checkbox" class="chk-we" value="2026-03-29" onchange="applyF()"> 2026-03-29</label>
+<label><input type="checkbox" class="chk-we" value="2026-04-05" onchange="applyF()"> 2026-04-05</label>
+<label><input type="checkbox" class="chk-we" value="2026-04-12" onchange="applyF()"> 2026-04-12</label>
+<label><input type="checkbox" class="chk-we" value="2026-04-19" onchange="applyF()"> 2026-04-19</label>
+<label><input type="checkbox" class="chk-we" value="2026-04-26" onchange="applyF()"> 2026-04-26</label>
+<label><input type="checkbox" class="chk-we" value="2026-05-03" onchange="applyF()"> 2026-05-03</label>
+<label><input type="checkbox" class="chk-we" value="2026-05-10" onchange="applyF()"> 2026-05-10</label>
+<label><input type="checkbox" class="chk-we" value="2026-05-17" onchange="applyF()"> 2026-05-17</label>
+<label><input type="checkbox" class="chk-we" value="2026-05-24" onchange="applyF()"> 2026-05-24</label>
+<label><input type="checkbox" class="chk-we" value="2026-05-31" onchange="applyF()"> 2026-05-31</label>
+<label><input type="checkbox" class="chk-we" value="2026-06-07" onchange="applyF()"> 2026-06-07</label>
+<label><input type="checkbox" class="chk-we" value="2026-06-14" onchange="applyF()"> 2026-06-14</label>
+<label><input type="checkbox" class="chk-we" value="2026-06-21" onchange="applyF()"> 2026-06-21</label>
+    </div>
+  </div>
+
   <div class="fdiv"></div>
-  <select class="fsel" id="ft" onchange="applyF()">
-    <option value="">All Territories</option>
-    <option>North OC</option><option>South OC</option><option>SD Properties</option>
-    <option>Commercial</option><option>Brenden</option><option>Elderkin</option><option>STONE</option>
-  </select>
-  <select class="fsel" id="fp" onchange="applyF()">
-    <option value="">All Property Types</option>
-    <option>Single-Family</option><option>Multi-Family</option><option>Commercial</option>
-  </select>
+
+  <!-- TERRITORY multi-select -->
+  <div class="msel-wrap" id="wrap-ter">
+    <button class="msel-btn" onclick="toggleDrop('ter')" id="btn-ter">
+      All Territories <span class="msel-arrow">▾</span>
+    </button>
+    <div class="msel-drop" id="drop-ter">
+      <label class="msel-all"><input type="checkbox" id="chk-ter-all" checked onchange="toggleAll('ter')"> All Territories</label>
+      <hr>
+      <label><input type="checkbox" class="chk-ter" value="North OC"      onchange="applyF()"> North OC</label>
+      <label><input type="checkbox" class="chk-ter" value="South OC"      onchange="applyF()"> South OC</label>
+      <label><input type="checkbox" class="chk-ter" value="SD Properties" onchange="applyF()"> SD Properties</label>
+      <label><input type="checkbox" class="chk-ter" value="Commercial"    onchange="applyF()"> Commercial</label>
+      <label><input type="checkbox" class="chk-ter" value="Brenden"       onchange="applyF()"> Brenden</label>
+      <label><input type="checkbox" class="chk-ter" value="Elderkin"      onchange="applyF()"> Elderkin</label>
+      <label><input type="checkbox" class="chk-ter" value="STONE"         onchange="applyF()"> STONE</label>
+    </div>
+  </div>
+
+  <!-- PROPERTY TYPE multi-select -->
+  <div class="msel-wrap" id="wrap-pt">
+    <button class="msel-btn" onclick="toggleDrop('pt')" id="btn-pt">
+      All Property Types <span class="msel-arrow">▾</span>
+    </button>
+    <div class="msel-drop" id="drop-pt">
+      <label class="msel-all"><input type="checkbox" id="chk-pt-all" checked onchange="toggleAll('pt')"> All Property Types</label>
+      <hr>
+      <label><input type="checkbox" class="chk-pt" value="Single-Family" onchange="applyF()"> Single-Family</label>
+      <label><input type="checkbox" class="chk-pt" value="Multi-Family"  onchange="applyF()"> Multi-Family</label>
+      <label><input type="checkbox" class="chk-pt" value="Commercial"    onchange="applyF()"> Commercial</label>
+    </div>
+  </div>
+
   <div class="fdiv"></div>
   <button class="freset" onclick="resetF()">&#10005; Reset</button>
   <span class="fbadge" id="fbadge">Filtered</span>
@@ -248,10 +329,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <p class="ptitle">Operations Overview</p>
   <p class="psub" id="sub-overview">All territories · 2025</p>
   <div class="krow">
-    <div class="kpi gld" id="kpi-rent-roll"><div class="klbl">Monthly Rent Roll</div><div class="kval">$2,885</div><div class="ksub">Avg rent / unit · all data</div></div>
-    <div class="kpi" id="kpi-vacant"><div class="klbl">Vacant Units</div><div class="kval">65</div><div class="ksub">Vacant-Unrented</div><span class="kbdg br">4 Territories</span></div>
+    <div class="kpi gld" id="kpi-rent-roll"><div class="klbl">Monthly Rent Roll</div><div class="kval">$2,885</div></div>
+    <div class="kpi" id="kpi-vacant"><div class="klbl">Vacant Units</div><div class="kval">65</div><div class="ksub" id="kpi-vacant-sub">—</div></div>
     <div class="kpi sge" id="kpi-lr-renewed"><div class="klbl">Leases Renewed</div><div class="kval">52</div><div class="ksub">vs 14 move-outs</div></div>
-    <div class="kpi cor"><div class="klbl">Open Work Orders</div><div class="kval">450+</div><div class="ksub">Assigned / Scheduled</div></div>
+    <div class="kpi cor"><div class="klbl">Open Work Orders</div><div class="kval">450+</div></div>
     <div class="kpi"><div class="klbl">Best NPS Territory</div><div class="kval" id="kpi-best-nps-ter">South OC</div><div class="ksub" id="kpi-best-nps-score">Score: 83.0</div><span class="kbdg bg">World-class</span></div>
     <div class="kpi nvy"><div class="klbl">5-Star Review Lead</div><div class="kval" id="kpi-top-reviewer-val">Daeyna</div><div class="ksub" id="kpi-top-reviewer-sub">47 reviews</div></div>
   </div>
@@ -279,7 +360,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="kpi" id="kpi-apps"><div class="klbl">Total Applications</div><div class="kval">1,527</div><div class="ksub">All statuses</div></div>
     <div class="kpi sge" id="kpi-converted"><div class="klbl">Converted (Leases)</div><div class="kval">127</div><div class="ksub">8.3% conversion rate</div></div>
     <div class="kpi cor" id="kpi-denied"><div class="klbl">Denied</div><div class="kval">454</div><div class="ksub">Credit / income fails</div></div>
-    <div class="kpi gld"><div class="klbl">Avg Days Vacant</div><div class="kval">160</div><div class="ksub">Per unit when listed</div></div>
+    <div class="kpi gld"><div class="klbl">Listed to Leased</div><div class="kval" id="kpi-ltl-val">—</div><div class="ksub" id="kpi-ltl-sub">Avg days · leased units</div></div>
     <div class="kpi"><div class="klbl">Renewal Rate</div><div class="kval">79%</div><div class="ksub">1,092 renewed</div></div>
   </div>
   <div class="g2">
@@ -454,9 +535,56 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="cw tall"><canvas id="c-email"></canvas></div>
   </div>
 </div>
+<div class="page" id="scorecard">
+  <p class="ptitle">Weekly Overview</p>
+  <p class="psub">Weekly performance snapshot · all KPIs side by side</p>
+
+  <div style="overflow-x:auto;">
+  <table class="dt" id="scorecard-table" style="font-size:12px;min-width:1200px;">
+    <thead>
+      <tr>
+        <th>WE</th>
+        <th>Unit Count</th>
+        <th title="Target >= 40">Target NPS</th>
+        <th>NPS</th>
+        <th title="Target <= 40">Target Open WO</th>
+        <th>Opened WO</th>
+        <th title="Target >= $3,000">Target Rent/Unit</th>
+        <th>Rent/Unit</th>
+        <th title="Target <= 3%">Target Vacancy</th>
+        <th>Vacant Units</th>
+        <th>Vacancy %</th>
+        <th title="Target <= 80%">Target LR%</th>
+        <th>LR %</th>
+        <th title="Target < 10 Days">Target Unit Turn</th>
+        <th>Unit Turn</th>
+        <th title="Target <= 1%">Target AR%</th>
+        <th>AR %</th>
+        <th>Owner Concessions</th>
+      </tr>
+    </thead>
+    <tbody id="scorecard-tbody">
+    </tbody>
+    <tfoot id="scorecard-tfoot"></tfoot>
+  </table>
+  </div>
+</div>
 <script>
 <<<DATA_PLACEHOLDER>>>
 <<<D2_PLACEHOLDER>>>
+
+// ── COMPAT SHIMS (old code that reads fy/fm/fwe/ft/fp values) ────────────────
+// These IDs no longer exist as <select> elements — shim them to return ''
+// All new code uses getFilters() directly
+document.getElementById_orig = document.getElementById.bind(document);
+document.getElementById = function(id) {
+  var legacy = {fy:1, fm:1, fwe:1, ft:1, fp:1};
+  if (legacy[id]) {
+    return { value: '', classList: { toggle:function(){}, remove:function(){}, add:function(){} } };
+  }
+  return document.getElementById_orig(id);
+};
+
 // ── COLORS ────────────────────────────────────────────
 const C = {
   navy:'#0D1B2A', sky:'#2A7FBF', gold:'#C9A84C', coral:'#D95C3A',
@@ -526,11 +654,15 @@ function mkLeg(id, labels, colors, data) {
 
 // ── MAIN RENDER ───────────────────────────────────────
 function render() {
-  const y  = document.getElementById('fy').value;
-  const mo = document.getElementById('fm').value;
-  const we = document.getElementById('fwe').value;
-  const t  = document.getElementById('ft').value;
-  const p  = document.getElementById('fp').value;
+  var F  = getFilters();
+  // For charts that need a single value, use first selected or empty
+  const y  = F.years.length  === 1 ? F.years[0]  : (F.years.length  ? '' : '');
+  const mo = F.months.length === 1 ? F.months[0] : (F.months.length ? '' : '');
+  const we = F.wes.length    === 1 ? F.wes[0]    : (F.wes.length    ? '' : '');
+  const t  = F.ters.length   === 1 ? F.ters[0]   : (F.ters.length   ? '' : '');
+  const p  = F.pts.length    === 1 ? F.pts[0]    : (F.pts.length    ? '' : '');
+  // For multi-month charts: use all selected months or all months
+  const MONTHS_FILTER = F.months.length ? F.months : MONTHS;
 
   // ── Overview: Move-in / Move-out
   if (we) {
@@ -599,7 +731,9 @@ function render() {
 
     const el = document.getElementById('kpi-lr-renewed');
     if (el) {
-      el.querySelector('.kval').textContent = totalRenewed.toLocaleString();
+      const nonPending = totalRenewed + totalMoveOut;
+      const lrPct = nonPending > 0 ? (totalRenewed / nonPending * 100).toFixed(1) + '%' : '—';
+      el.querySelector('.kval').textContent = totalRenewed + ' / ' + lrPct;
       el.querySelector('.ksub').textContent =
         'vs ' + totalMoveOut + ' move-outs · ' + totalExpiring + ' expiring';
     }
@@ -629,7 +763,19 @@ function render() {
   renderNPSBars('nps-bars-ov',  y, mo, t, p);
   renderNPSBars('nps-bars-sat', y, mo, t, p);
 
-  // ── Best NPS Territory KPI ─────────────────────────────────────────────
+  // ── Listed to Leased KPI ──────────────────────────────────────────────────
+  (function() {
+    const k   = (y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'');
+    const val = DATA.ltl ? (DATA.ltl[k] || DATA.ltl['|||']) : null;
+    const el  = document.getElementById('kpi-ltl-val');
+    const sub = document.getElementById('kpi-ltl-sub');
+    if (el && val != null) {
+      el.textContent  = val.toFixed(1) + 'd';
+      if (sub) sub.textContent = 'Avg days · leased units';
+    }
+  })();
+
+// ── Best NPS Territory KPI ─────────────────────────────────────────────
   (function() {
     const MIN_RESPONSES = 10;
     const TERS = ['North OC','South OC','SD Properties','Commercial',
@@ -686,11 +832,12 @@ function render() {
 
 // ── NOTE: renderStatic() is filter-aware and called separately ─
 function renderStatic() {
-  const y  = document.getElementById('fy').value;
-  const mo = document.getElementById('fm').value;
-  const we = document.getElementById('fwe').value;
-  const t  = document.getElementById('ft').value;
-  const p  = document.getElementById('fp').value;
+  var F  = getFilters();
+  const y  = F.years.length  === 1 ? F.years[0]  : '';
+  const mo = F.months.length === 1 ? F.months[0] : '';
+  const we = F.wes.length    === 1 ? F.wes[0]    : '';
+  const t  = F.ters.length   === 1 ? F.ters[0]   : '';
+  const p  = F.pts.length    === 1 ? F.pts[0]    : '';
   const k  = (y||'')+'|'+(mo||'')+'|'+(t||'')+'|'+(p||'');
 
   // ── helper: get D2 value by key ──────────────────────
@@ -768,8 +915,31 @@ function renderStatic() {
   else if (y)       snapKey = 'eom:' + y + '|';
   else              snapKey = 'eom:|||';  // All years = weighted avg across all EOM months
 
-  const portMap   = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
-  const vacSnap   = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||']  || {};
+  const portMapRaw = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
+  const vacSnapRaw = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||']  || {};
+
+  // When proptype filter active: override counts from port_pt / vac_pt
+  // port_pt and vac_pt are keyed by 'we:YYYY-MM-DD' (weekly snapshots)
+  // Use the resolved WE date for proptype lookup
+  let portMap = portMapRaw;
+  let vacSnap = vacSnapRaw;
+  if (p) {
+    // Resolve which WE to use for pt lookup
+    var ptWE = we || D2.latest_we;
+    var ptPort = (D2.port_pt || {})[ptWE] || {};
+    var ptVac  = (D2.vac_pt  || {})[ptWE] || {};
+    // Build per-territory counts filtered by proptype
+    var portMapPT = {}; var vacSnapPT = {};
+    Object.keys(portMapRaw).forEach(function(ter) {
+      portMapPT[ter] = (ptPort[ter] || {})[p] || 0;
+    });
+    Object.keys(vacSnapRaw).forEach(function(ter) {
+      vacSnapPT[ter] = (ptVac[ter] || {})[p] || 0;
+    });
+    portMap = portMapPT;
+    vacSnap = vacSnapPT;
+  }
+
   const vacSnapFiltered = t
     ? Object.fromEntries(Object.entries(vacSnap).filter(([k]) => k === t))
     : vacSnap;
@@ -811,7 +981,7 @@ function renderStatic() {
         `<div class="leg-item">` +
           `<div class="leg-dot" style="background:${vacColors[i]}"></div>` +
           `<div class="leg-lbl">${l}</div>` +
-          `<div class="leg-val">${vacPcts[i] !== null ? vacPcts[i]+'%' : 'N/A'} <span style="color:var(--muted);font-size:11px">(${vacCounts[i]}${portTotals[i] ? '/'+portTotals[i] : ''})</span></div>` +
+          `<div class="leg-val">${vacPcts[i] !== null ? vacPcts[i]+'%' : 'N/A'}</div>` +
         `</div>`
       ).join('');
 
@@ -823,7 +993,7 @@ function renderStatic() {
         `<div class="leg-item" style="margin-top:8px;padding-top:8px;border-top:2px solid var(--navy);">` +
           `<div class="leg-dot" style="background:var(--navy)"></div>` +
           `<div class="leg-lbl" style="font-weight:700;color:var(--navy)">Total</div>` +
-          `<div class="leg-val" style="font-weight:700;color:var(--navy)">${totalPct}% <span style="color:var(--muted);font-size:11px">(${totalVac}/${totalPort})</span></div>` +
+          `<div class="leg-val" style="font-weight:700;color:var(--navy)">${totalPct}%</div>` +
         `</div>`;
 
       legEl.innerHTML = rows + totalRow;
@@ -849,8 +1019,24 @@ function renderStatic() {
   const overallVacPct = totalPortfolio > 0
     ? (Math.round(totalVacUnrented / totalPortfolio * 1000) / 10)
     : 0;
-  setKPI('#kpi-vacant .kval', overallVacPct + '%');
-  setKPI('#kpi-vacant .ksub', totalVacUnrented + ' vacant / ' + totalPortfolio + ' total');
+  // For the unit count KPI: always use a point-in-time WE snapshot (not cumulative eom:|||)
+  // Use the selected WE, or latest WE if no WE filter
+  var kpiWE     = we || D2.latest_we || '';
+  var kpiSnapKey = kpiWE ? 'we:' + kpiWE : 'we:' + (D2.latest_we || '');
+  var kpiVacSnap = D2.vac_donut2[kpiSnapKey] || {};
+  // Filter by territory if selected
+  var kpiVacCount = 0;
+  Object.keys(kpiVacSnap).forEach(function(ter) {
+    if (!t || ter === t) kpiVacCount += kpiVacSnap[ter];
+  });
+
+  // Format snapshot date as MM/DD/YYYY
+  var snapFormatted = kpiWE
+    ? (kpiWE.slice(5,7) + '/' + kpiWE.slice(8,10) + '/' + kpiWE.slice(0,4))
+    : '';
+
+  setKPI('#kpi-vacant .kval', overallVacPct + '% / ' + kpiVacCount + ' units');
+  setKPI('#kpi-vacant .ksub', snapFormatted ? 'vacant as of ' + snapFormatted : 'Vacant-Unrented');
 
   // ── 2. TOP VACANT PROPERTIES TABLE ───────────────────
   const topVacEl = document.getElementById('top-vacant-tbody');
@@ -941,7 +1127,7 @@ function renderStatic() {
         const k     = yr+'|'+mo+'|'+(t||'')+'|'+(p||'');
         const pct   = D2.ar_pct[k];
         const ar    = (D2.up_totals[k] || {total:0}).total;
-        const rnt   = D2.rr_totals[k] || 0;
+        const rnt   = D2.rr_rent[k] || 0;
         if (pct != null || ar > 0) {
           labels.push(MS[i]+' '+yr.slice(2));
           arPcts.push(pct != null ? pct : 0);
@@ -1136,87 +1322,289 @@ function renderStatic() {
 // ── EOS SCORECARD ─────────────────────────────────────────────────────────────
 function renderScorecard() {
   var tbody = document.getElementById('scorecard-tbody');
-  var tfoot = document.getElementById('scorecard-tfoot');
-  if (!tbody) return;
+  if (!tbody) { console.error('scorecard-tbody not found'); return; }
 
-  var y  = document.getElementById('fy').value;
-  var we = document.getElementById('fwe').value;
-
+  var F    = getFilters();
   var rows = (D2.scorecard || []).slice();
-  if (y)  rows = rows.filter(function(r){ return r.we.indexOf(y) === 0; });
-  if (we) rows = rows.filter(function(r){ return r.we === we; });
 
-  // Color coding helper
-  function colorCell(val, good, fmt) {
-    if (val == null) return '<td style="text-align:right;color:#7A8694">—</td>';
-    var pass  = good(val);
-    var color = pass ? '#2E7D53' : '#B93B2E';
-    var bg    = pass ? '#E6F4EF' : '#FDECEA';
-    return '<td style="text-align:right;color:' + color + ';background:' + bg + ';font-weight:600">' + fmt(val) + '</td>';
-  }
-  function plainCell(val, fmt) {
-    return '<td style="text-align:right">' + (val == null ? '—' : fmt(val)) + '</td>';
-  }
-  function targetCell(txt) {
-    return '<td style="text-align:center;color:#7A8694;font-size:11px">' + txt + '</td>';
-  }
-  function fmt2(v)  { return v.toFixed(2) + '%'; }
-  function fmtd(v)  { return v.toFixed(1) + 'd'; }
-  function fmtR(v)  { return '$' + v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  // ── Step 1: Property type filter ────────────────────────────────────────
+  // Property type affects unit_count and vacant from D2.port_pt / D2.vac_pt
+  // We apply it at aggregation time below
 
-  var html = '';
-  for (var i=0; i<rows.length; i++) {
+  // ── Step 1b: Filter by territory ─────────────────────────────────────────
+  if (F.ters.length) {
+    rows = rows.filter(function(r){ return F.ters.indexOf(r.territory) >= 0; });
+  } else {
+    rows = rows.filter(function(r){ return r.territory === ''; });
+  }
+
+  // ── Step 2: Filter by year, WE, month ────────────────────────────────────
+  if (F.years.length) {
+    rows = rows.filter(function(r){ return F.years.indexOf(r.we.slice(0,4)) >= 0; });
+  }
+  if (F.wes.length) {
+    rows = rows.filter(function(r){ return F.wes.indexOf(r.we) >= 0; });
+  }
+  if (F.months.length) {
+    var MO_MAP = {January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
+                  July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
+    var moNums = F.months.map(function(m){ return MO_MAP[m]; });
+    rows = rows.filter(function(r){ return moNums.indexOf(r.we.slice(5,7)) >= 0; });
+  }
+
+  // ── Step 2b: Override unit_count and vacant with proptype-filtered values ─
+  if (F.pts.length) {
+    rows = rows.map(function(r) {
+      var row = JSON.parse(JSON.stringify(r)); // clone
+      // Get the territories this row covers
+      var ters = (r.territory && r.territory !== 'multi' && r.territory !== '')
+        ? [r.territory]
+        : (F.ters.length ? F.ters : Object.keys((D2.port_pt[r.we] || {})));
+
+      var uc = 0; var vc = 0;
+      ters.forEach(function(ter) {
+        F.pts.forEach(function(pt) {
+          uc += ((D2.port_pt[r.we] || {})[ter] || {})[pt] || 0;
+          vc += ((D2.vac_pt[r.we]  || {})[ter] || {})[pt] || 0;
+        });
+      });
+      row.unit_count = uc;
+      row.vacant     = vc;
+      row.vac_pct    = uc > 0 ? Math.round(vc/uc*10000)/100 : 0;
+      return row;
+    });
+  }
+
+  // ── Step 3: Aggregate multiple territory rows into one row per WE ─────────
+  if (F.ters.length > 1) {
+    var byWE = {};
+    rows.forEach(function(r) {
+      if (!byWE[r.we]) byWE[r.we] = [];
+      byWE[r.we].push(r);
+    });
+    var merged = [];
+    Object.keys(byWE).sort().forEach(function(we) {
+      var grp = byWE[we];
+      // Summable fields
+      var uc  = grp.reduce(function(s,r){ return s + (r.unit_count||0); }, 0);
+      var vc  = grp.reduce(function(s,r){ return s + (r.vacant||0); }, 0);
+      var wo  = grp.reduce(function(s,r){ return s + (r.opened_wo||0); }, 0);
+      var con = grp.reduce(function(s,r){ return s + (r.concessions||0); }, 0);
+
+      // Vacancy % = sum(vacant) / sum(unit_count) * 100
+      var vp = uc > 0 ? Math.round(vc/uc*10000)/100 : 0;
+
+      // Rent/Unit = weighted avg by unit count
+      var rentSum  = grp.reduce(function(s,r){ return s + (r.rent_unit||0)*(r.unit_count||0); }, 0);
+      var rentBase = grp.reduce(function(s,r){ return r.rent_unit!=null ? s+(r.unit_count||0) : s; }, 0);
+      var ru = rentBase > 0 ? Math.round(rentSum/rentBase*100)/100 : null;
+
+      // NPS = weighted avg by response count (use unit_count as proxy)
+      var npsValid = grp.filter(function(r){ return r.nps != null; });
+      var nps = null;
+      if (npsValid.length) {
+        var npsSum  = npsValid.reduce(function(s,r){ return s + r.nps*(r.unit_count||1); }, 0);
+        var npsBase = npsValid.reduce(function(s,r){ return s + (r.unit_count||1); }, 0);
+        nps = npsBase > 0 ? Math.round(npsSum/npsBase*10)/10 : null;
+      }
+
+      // LR% = weighted avg
+      var lrValid = grp.filter(function(r){ return r.lr_pct != null; });
+      var lr_pct  = null;
+      if (lrValid.length) {
+        var lrSum  = lrValid.reduce(function(s,r){ return s + r.lr_pct*(r.unit_count||1); }, 0);
+        var lrBase = lrValid.reduce(function(s,r){ return s + (r.unit_count||1); }, 0);
+        lr_pct = lrBase > 0 ? Math.round(lrSum/lrBase*100)/100 : null;
+      }
+
+      // Unit Turn = avg (simple)
+      var utValid = grp.filter(function(r){ return r.unit_turn != null; });
+      var unit_turn = utValid.length
+        ? Math.round(utValid.reduce(function(s,r){ return s+r.unit_turn; },0)/utValid.length*100)/100
+        : null;
+
+      // AR% = sum(unpaid) / sum(rent) * 100 — approximate via ar_pct * rent_unit * unit_count
+      var arValid = grp.filter(function(r){ return r.ar_pct != null && r.rent_unit != null; });
+      var ar_pct  = null;
+      if (arValid.length) {
+        var arNum = arValid.reduce(function(s,r){ return s + r.ar_pct/100 * r.rent_unit * r.unit_count; }, 0);
+        var arDen = arValid.reduce(function(s,r){ return s + r.rent_unit * r.unit_count; }, 0);
+        ar_pct = arDen > 0 ? Math.round(arNum/arDen*10000)/100 : null;
+      }
+
+      merged.push({we:we, unit_count:uc, vacant:vc, vac_pct:vp,
+        opened_wo:wo, rent_unit:ru, nps:nps, lr_pct:lr_pct,
+        unit_turn:unit_turn, ar_pct:ar_pct, concessions:con, territory:'multi'});
+    });
+    rows = merged;
+  }
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="18" style="text-align:center;color:var(--muted);padding:20px">No data for selected filters</td></tr>';
+    document.getElementById('scorecard-tfoot').innerHTML = '';
+    return;
+  }
+
+  // ── Step 4: Render rows ───────────────────────────────────────────────────
+  var out = '';
+  for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
-    html += '<tr>';
-    html += '<td style="font-weight:600;white-space:nowrap">' + r.we + '</td>';
-    html += plainCell(r.unit_count, function(v){ return v.toLocaleString(); });
-    html += targetCell('≥ 40');
-    html += colorCell(r.nps,       function(v){ return v >= 40; },   function(v){ return v.toFixed(1); });
-    html += targetCell('≤ 40');
-    html += colorCell(r.opened_wo, function(v){ return v <= 40; },   function(v){ return v; });
-    html += targetCell('≥ $3,000');
-    html += colorCell(r.rent_unit, function(v){ return v >= 3000; }, fmtR);
-    html += targetCell('≤ 3%');
-    html += plainCell(r.vacant,    function(v){ return v; });
-    html += colorCell(r.vac_pct,   function(v){ return v <= 3; },    fmt2);
-    html += targetCell('≤ 80%');
-    html += colorCell(r.lr_pct,    function(v){ return v <= 80; },   fmt2);
-    html += targetCell('< 10d');
-    html += colorCell(r.unit_turn, function(v){ return v < 10; },    fmtd);
-    html += targetCell('≤ 1%');
-    html += colorCell(r.ar_pct,    function(v){ return v <= 1; },    fmt2);
-    html += '<td style="text-align:right;color:#D95C3A;font-weight:' + (r.concessions ? '600' : '400') + '">'
-          + (r.concessions ? '$' + r.concessions.toLocaleString() : '—') + '</td>';
-    html += '</tr>';
-  }
-  tbody.innerHTML = html;
 
-  // Totals row
-  if (rows.length > 0) {
-    function avg(key) {
-      var vals = rows.filter(function(r){ return r[key] != null; });
-      if (!vals.length) return null;
-      return vals.reduce(function(s,r){ return s + r[key]; }, 0) / vals.length;
+    function bg(pass) { return pass ? 'background:#E6F4EF;color:#2E7D53;font-weight:600' : 'background:#FDECEA;color:#B93B2E;font-weight:600'; }
+    function na()     { return '<td style="text-align:right;color:#999">—</td>'; }
+    function val(v, style) { return '<td style="text-align:right;' + style + '">' + v + '</td>'; }
+
+    out += '<tr>';
+    out += '<td style="white-space:nowrap;font-weight:600">' + r.we + '</td>';
+    out += val(r.unit_count ? r.unit_count.toLocaleString() : '—', '');
+    out += '<td style="text-align:center;font-size:11px;color:#999">&ge;40</td>';
+    out += (r.nps != null) ? val(r.nps.toFixed(1), bg(r.nps >= 40)) : na();
+    out += '<td style="text-align:center;font-size:11px;color:#999">&le;40</td>';
+    out += val(r.opened_wo, bg(r.opened_wo <= 40));
+    out += '<td style="text-align:center;font-size:11px;color:#999">&ge;$3k</td>';
+    out += (r.rent_unit != null) ? val('$' + r.rent_unit.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}), bg(r.rent_unit >= 3000)) : na();
+    out += '<td style="text-align:center;font-size:11px;color:#999">&le;3%</td>';
+    out += val(r.vacant != null ? r.vacant : '—', '');
+    out += val(r.vac_pct.toFixed(2) + '%', bg(r.vac_pct <= 3));
+    out += '<td style="text-align:center;font-size:11px;color:#999">&le;80%</td>';
+    out += (r.lr_pct != null) ? val(r.lr_pct.toFixed(2) + '%', bg(r.lr_pct <= 80)) : na();
+    out += '<td style="text-align:center;font-size:11px;color:#999">&lt;10d</td>';
+    out += (r.unit_turn != null) ? val(r.unit_turn.toFixed(1) + 'd', bg(r.unit_turn < 10)) : na();
+    out += '<td style="text-align:center;font-size:11px;color:#999">&le;1%</td>';
+    out += (r.ar_pct != null) ? val(r.ar_pct.toFixed(2) + '%', bg(r.ar_pct <= 1)) : na();
+    out += '<td style="text-align:right;color:#D95C3A;font-weight:' + (r.concessions ? '600' : '400') + '">' + (r.concessions ? '$' + r.concessions.toLocaleString() : '—') + '</td>';
+    out += '</tr>';
+  }
+  tbody.innerHTML = out;
+
+  // ── Step 5: Totals row ────────────────────────────────────────────────────
+  var tfoot = document.getElementById('scorecard-tfoot');
+  if (tfoot && rows.length > 0) {
+    function avgOf(key) {
+      var valid = rows.filter(function(x){ return x[key] != null; });
+      if (!valid.length) return null;
+      return valid.reduce(function(s,x){ return s + x[key]; }, 0) / valid.length;
     }
-    var totCon = rows.reduce(function(s,r){ return s + r.concessions; }, 0);
-    var avgWO  = rows.reduce(function(s,r){ return s + r.opened_wo; }, 0) / rows.length;
-    var aN=avg('nps'), aR=avg('rent_unit'), aV=avg('vac_pct'),
-        aL=avg('lr_pct'), aU=avg('unit_turn'), aA=avg('ar_pct');
+    var aW  = rows.reduce(function(s,x){return s+x.opened_wo;},0)/rows.length;
+    var aV  = rows.reduce(function(s,x){return s+x.vac_pct;},0)/rows.length;
+    var tC  = rows.reduce(function(s,x){return s+x.concessions;},0);
+    var aN  = avgOf('nps'); var aR = avgOf('rent_unit');
+    var aL  = avgOf('lr_pct'); var aU = avgOf('unit_turn'); var aA = avgOf('ar_pct');
     tfoot.innerHTML =
       '<tr style="font-weight:700;background:#F5F0E8;border-top:2px solid #0D1B2A">'
-      + '<td>AVG/TOTAL</td>'
+      + '<td>AVG</td>'
       + '<td style="text-align:right">' + rows[rows.length-1].unit_count.toLocaleString() + '</td>'
       + '<td></td><td style="text-align:right">' + (aN!=null?aN.toFixed(1):'—') + '</td>'
-      + '<td></td><td style="text-align:right">' + avgWO.toFixed(0) + '</td>'
-      + '<td></td><td style="text-align:right">' + (aR!=null?fmtR(aR):'—') + '</td>'
+      + '<td></td><td style="text-align:right">' + aW.toFixed(0) + '</td>'
+      + '<td></td><td style="text-align:right">' + (aR!=null?'$'+aR.toFixed(2):'—') + '</td>'
       + '<td></td><td style="text-align:right">—</td>'
-      + '<td style="text-align:right">' + (aV!=null?aV.toFixed(2)+'%':'—') + '</td>'
+      + '<td style="text-align:right">' + aV.toFixed(2) + '%</td>'
       + '<td></td><td style="text-align:right">' + (aL!=null?aL.toFixed(2)+'%':'—') + '</td>'
       + '<td></td><td style="text-align:right">' + (aU!=null?aU.toFixed(1)+'d':'—') + '</td>'
       + '<td></td><td style="text-align:right">' + (aA!=null?aA.toFixed(2)+'%':'—') + '</td>'
-      + '<td style="text-align:right;color:#D95C3A">$' + totCon.toLocaleString() + '</td>'
+      + '<td style="text-align:right;color:#D95C3A">$' + tC.toLocaleString() + '</td>'
       + '</tr>';
   }
+}
+
+
+// ── EOS SCORE CARD ────────────────────────────────────────────────────────────
+function renderEOS() {
+  var tbody = document.getElementById('eos-tbody');
+  if (!tbody) return;
+
+  var F    = getFilters();
+  var rows = (D2.eos || []).slice();
+
+  if (F.years.length) {
+    rows = rows.filter(function(r){ return F.years.indexOf(r.we.slice(0,4)) >= 0; });
+  }
+  if (F.months.length) {
+    var MO_MAP = {January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
+                  July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
+    var moNums = F.months.map(function(m){ return MO_MAP[m]; });
+    rows = rows.filter(function(r){ return moNums.indexOf(r.we.slice(5,7)) >= 0; });
+  }
+  if (F.wes.length) {
+    rows = rows.filter(function(r){ return F.wes.indexOf(r.we) >= 0; });
+  }
+
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="30" style="text-align:center;color:var(--muted);padding:20px">No data for selected filters</td></tr>';
+    return;
+  }
+
+  var MONTH_NAMES = ['','January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+
+  // Build month groups for header
+  var monthGroups = [];
+  var prevMo = null;
+  rows.forEach(function(r, i) {
+    var mo = r.we.slice(5,7);
+    var moName = MONTH_NAMES[parseInt(mo,10)];
+    if (moName !== prevMo) {
+      monthGroups.push({name: moName, start: i, count: 0});
+      prevMo = moName;
+    }
+    monthGroups[monthGroups.length-1].count++;
+  });
+
+  var latestWE = rows[rows.length-1].we;
+
+  // Rebuild the table headers — month row + WE range row
+  var table = document.getElementById('eos-table');
+  if (table) {
+    var thead = table.querySelector('thead');
+    var moHdrCells = monthGroups.map(function(g) {
+      return '<th colspan="'+g.count+'" style="text-align:center;background:#0D1B2A;color:#C9A84C;padding:4px 8px;font-size:11px;letter-spacing:1px;border-bottom:1px solid #2A7FBF">'+g.name.toUpperCase()+'</th>';
+    }).join('');
+
+    var weHdrCells = rows.map(function(r) {
+      var isLatest = r.we === latestWE;
+      var bg    = isLatest ? '#C9A84C' : '#1a2a3a';
+      var color = isLatest ? '#0D1B2A' : '#C9A84C';
+      return '<th style="text-align:center;background:'+bg+';color:'+color+';white-space:nowrap;padding:4px 6px;min-width:75px;font-size:11px">'+r.label+'</th>';
+    }).join('');
+
+    thead.innerHTML =
+      '<tr><th style="text-align:left;position:sticky;left:0;background:#0D1B2A;color:#fff;z-index:3;padding:4px 10px" rowspan="2">Measurables</th>' +
+      '<th style="text-align:center;background:#1a2a3a;color:#C9A84C;width:80px;font-size:11px" rowspan="2">Goal</th>' +
+      moHdrCells + '</tr>' +
+      '<tr>' + weHdrCells + '</tr>';
+  }
+
+  // Metrics definition
+  var metrics = [
+    { label:'NPS Score',           goal:'≥ 40',      key:'nps',       fmt:function(v){return v.toFixed(1);},   good:function(v){return v>=40;}  },
+    { label:'Lease Renewals',      goal:'≥ 80%',     key:'lr_pct',    fmt:function(v){return v.toFixed(2)+'%';},good:function(v){return v>=80;}  },
+    { label:'Unit Turnover (cumul)', goal:'≤ 15 days', key:'unit_turn', fmt:function(v){return v.toFixed(2);}, good:function(v){return v<=15;}  },
+    { label:'AR',                  goal:'≤ 1%',      key:'ar_pct',    fmt:function(v){return v.toFixed(2)+'%';},good:function(v){return v<=1;}   },
+    { label:'Showing Conversion',  goal:'≥ 40%',     key:'show_conv', fmt:function(v){return v.toFixed(2)+'%';},good:function(v){return v>=40;}  },
+    { label:'Vacancy $ Loss Rate', goal:'≤ $5,000',  key:'vac_loss',  fmt:function(v){return '$'+v.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});}, good:function(v){return v<=5000;} },
+    { label:'Vacancy Rate',        goal:'≤ 5%',      key:'vac_rate',  fmt:function(v){return v.toFixed(2)+'%';},good:function(v){return v<=5;}   },
+  ];
+
+  var out = '';
+  metrics.forEach(function(m, mi) {
+    var rowBg = mi%2===0 ? '#fff' : '#F9F7F3';
+    out += '<tr style="background:'+rowBg+'">';
+    out += '<td style="font-weight:600;padding:6px 10px;white-space:nowrap;position:sticky;left:0;background:'+rowBg+';z-index:1;border-right:2px solid #e0dbd0">'+m.label+'</td>';
+    out += '<td style="text-align:center;padding:6px 8px;color:var(--navy);font-size:11px;font-weight:600;background:#f0ece4">'+m.goal+'</td>';
+    rows.forEach(function(r) {
+      var val = r[m.key];
+      if (val == null) {
+        out += '<td style="text-align:center;color:#ccc;padding:4px 6px;font-size:12px">—</td>';
+      } else {
+        var pass  = m.good(val);
+        var color = pass ? '#2E7D53' : '#B93B2E';
+        var bg    = pass ? '#E6F4EF' : '#FDECEA';
+        out += '<td style="text-align:center;padding:4px 6px;color:'+color+';background:'+bg+';font-weight:600;font-size:12px">'+m.fmt(val,r)+'</td>';
+      }
+    });
+    out += '</tr>';
+  });
+  tbody.innerHTML = out;
 }
 
 // ── TAB SWITCHING ─────────────────────────────────────
@@ -1226,32 +1614,107 @@ function show(id, btn) {
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
   // Re-render charts now that the tab is visible
-  setTimeout(function(){ render(); renderStatic(); renderScorecard(); }, 50);
+  setTimeout(function(){ render(); renderStatic(); renderScorecard(); renderEOS(); }, 50);
 }
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
-function applyF() {
-  const ids = ['fy','fm','fwe','ft','fp'];
-  ids.forEach(id=>{
-    const el=document.getElementById(id);
-    el.classList.toggle('act', el.value!=='');
+// ── MULTI-SELECT FILTER HELPERS ──────────────────────────────────────────────
+function getSelected(cls) {
+  // Returns array of checked values, or [] if all checked / "All" checked
+  var all = document.querySelectorAll('.' + cls);
+  var checked = [];
+  all.forEach(function(cb){ if(cb.checked) checked.push(cb.value); });
+  // If all items checked = same as no filter
+  if (checked.length === all.length) return [];
+  return checked;
+}
+
+function toggleDrop(name) {
+  var drop = document.getElementById('drop-' + name);
+  // Close all other dropdowns first
+  document.querySelectorAll('.msel-drop').forEach(function(d){
+    if (d !== drop) d.classList.remove('open');
   });
-  const any = ids.some(id=>document.getElementById(id).value!=='');
-  document.getElementById('fbadge').style.display = any?'inline-block':'none';
+  drop.classList.toggle('open');
+}
+
+function toggleAll(name) {
+  var allChk = document.getElementById('chk-' + name + '-all');
+  var items   = document.querySelectorAll('.chk-' + name);
+  items.forEach(function(cb){ cb.checked = allChk.checked; });
+  applyF();
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e){
+  if (!e.target.closest('.msel-wrap')) {
+    document.querySelectorAll('.msel-drop').forEach(function(d){
+      d.classList.remove('open');
+    });
+  }
+});
+
+function getFilters() {
+  return {
+    years:    getSelected('chk-year'),   // [] = all
+    months:   getSelected('chk-month'),  // [] = all
+    wes:      getSelected('chk-we'),     // [] = all
+    ters:     getSelected('chk-ter'),    // [] = all
+    pts:      getSelected('chk-pt'),     // [] = all
+  };
+}
+
+function updateFilterBadge() {
+  var F = getFilters();
+  var active = F.years.length || F.months.length || F.wes.length ||
+               F.ters.length  || F.pts.length;
+  document.getElementById('fbadge').style.display = active ? 'inline-block' : 'none';
+
+  // Update button labels
+  function label(ids, allText) {
+    if (!ids.length) return allText;
+    if (ids.length === 1) return ids[0];
+    return ids.length + ' selected';
+  }
+  document.getElementById('btn-year').innerHTML  = label(F.years,  'All Years')          + ' <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-month').innerHTML = label(F.months, 'All Months')         + ' <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-we').innerHTML    = label(F.wes,    'All WE Dates')       + ' <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-ter').innerHTML   = label(F.ters,   'All Territories')    + ' <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-pt').innerHTML    = label(F.pts,    'All Property Types') + ' <span class="msel-arrow">▾</span>';
+
+  // Active styling on buttons
+  ['year','month','we','ter','pt'].forEach(function(n){
+    var btn = document.getElementById('btn-' + n);
+    var sel = getSelected('chk-' + n);
+    if (btn) btn.classList.toggle('act', sel.length > 0);
+  });
+}
+
+function applyF() {
+  updateFilterBadge();
   render();
   renderStatic();
   renderScorecard();
+  renderEOS();
 }
 
 function resetF() {
-  ['fy','fm','fwe','ft','fp'].forEach(id=>{
-    const el=document.getElementById(id);
-    el.value='';
-    el.classList.remove('act');
+  // Uncheck all, check "All" boxes
+  ['year','month','we','ter','pt'].forEach(function(n){
+    var allChk = document.getElementById('chk-' + n + '-all');
+    if (allChk) allChk.checked = true;
+    document.querySelectorAll('.chk-' + n).forEach(function(cb){ cb.checked = true; });
   });
-  document.getElementById('fbadge').style.display='none';
+  document.getElementById('fbadge').style.display = 'none';
+  // Reset button labels
+  document.getElementById('btn-year').innerHTML  = 'All Years <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-month').innerHTML = 'All Months <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-we').innerHTML    = 'All WE Dates <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-ter').innerHTML   = 'All Territories <span class="msel-arrow">▾</span>';
+  document.getElementById('btn-pt').innerHTML    = 'All Property Types <span class="msel-arrow">▾</span>';
   render();
   renderStatic();
+  renderScorecard();
 }
 
 // ── BOOT ──────────────────────────────────────────────
@@ -1259,40 +1722,24 @@ window.addEventListener('load', function() {
   render();
   renderStatic();
   renderScorecard();
+  renderEOS();
 });
 </script>
 
-<div class="page" id="scorecard">
-  <p class="ptitle">EOS Score Card</p>
-  <p class="psub">Weekly performance snapshot · all KPIs side by side</p>
 
+<div class="page" id="eos">
+  <p class="ptitle">EOS Score Card</p>
+  <p class="psub">Weekly KPI scorecard · measurables vs goals</p>
   <div style="overflow-x:auto;">
-  <table class="dt" id="scorecard-table" style="font-size:12px;min-width:1200px;">
+  <table class="dt" id="eos-table" style="font-size:12px;border-collapse:collapse;min-width:900px;">
     <thead>
       <tr>
-        <th>WE</th>
-        <th>Unit Count</th>
-        <th title="Target >= 40">Target NPS</th>
-        <th>NPS</th>
-        <th title="Target <= 40">Target Open WO</th>
-        <th>Opened WO</th>
-        <th title="Target >= $3,000">Target Rent/Unit</th>
-        <th>Rent/Unit</th>
-        <th title="Target <= 3%">Target Vacancy</th>
-        <th>Vacant Units</th>
-        <th>Vacancy %</th>
-        <th title="Target <= 80%">Target LR%</th>
-        <th>LR %</th>
-        <th title="Target < 10 Days">Target Unit Turn</th>
-        <th>Unit Turn</th>
-        <th title="Target <= 1%">Target AR%</th>
-        <th>AR %</th>
-        <th>Owner Concessions</th>
+        <th style="text-align:left;min-width:160px;position:sticky;left:0;background:#0D1B2A;color:#fff;z-index:2">Measurables</th>
+        <th style="text-align:center;background:#1a2a3a;color:#C9A84C;width:80px">Goal</th>
+        <th id="eos-col-headers" style="background:#0D1B2A"></th>
       </tr>
     </thead>
-    <tbody id="scorecard-tbody">
-    </tbody>
-    <tfoot id="scorecard-tfoot"></tfoot>
+    <tbody id="eos-tbody"></tbody>
   </table>
   </div>
 </div>
