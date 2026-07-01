@@ -246,10 +246,14 @@ addr_ter={str(r[0]).strip():str(r[1]).strip() for r in ter_map1[1:] if r and r[0
 vac_eom=eom_we_map(vac_rate,17,16,18)
 
 def get_vac_ter(r):
-    ter=str(r[25]).strip() if r[25] else ''
-    if ter and ter!='None': return ter
+    # Portfolio master is authoritative — addr_ter mapping1 may have stale Mid OC
     addr=str(r[15]).strip() if r[15] else str(r[0]).strip()
-    return addr_ter.get(addr,'') or (resolve(addr) or {}).get('territory','')
+    resolved=(resolve(addr) or {}).get('territory','')
+    if resolved and resolved not in SKIP_TERS: return resolved
+    ter=str(r[25]).strip() if r[25] else ''
+    if ter and ter not in SKIP_TERS: return ter
+    mapped=addr_ter.get(addr,'')
+    return mapped if mapped not in SKIP_TERS else ''
 
 vac_donut2=defaultdict(lambda:defaultdict(int))
 all_vac_we=sorted(set(r[18] for r in vac_rate[1:] if r and r[18] and hasattr(r[18],'strftime')))
@@ -326,6 +330,20 @@ for r in app_rows[1:]:
     if idx<0: continue
     for k in agg_keys(year,month,ter,prop): app_tbl[k][idx]+=1
 D2['app_donut']={k:list(v) for k,v in app_tbl.items()}
+
+# Listed-to-Leased avg (col AK = pre-computed days)
+ltl_tbl=defaultdict(lambda:{'sum':0,'cnt':0})
+for r in app_rows[1:]:
+    if not r: continue
+    days=r[36] if isinstance(r[36],(int,float)) and r[36]>=0 else None
+    if days is None: continue
+    year=r[37].strftime('%Y') if r[37] and hasattr(r[37],'strftime') else ''
+    month=r[37].strftime('%B') if r[37] and hasattr(r[37],'strftime') else ''
+    addr=r[27] or r[0]; attrs=resolve(str(addr)) if addr else {}
+    ter=attrs.get('territory',''); prop=attrs.get('proptype','')
+    for k in agg_keys(year,month,ter,prop):
+        ltl_tbl[k]['sum']+=days; ltl_tbl[k]['cnt']+=1
+DATA['ltl']={k:round(v['sum']/v['cnt'],1) for k,v in ltl_tbl.items() if v['cnt']>0}
 
 # WO status + issues
 wo_st=defaultdict(lambda:defaultdict(int))
