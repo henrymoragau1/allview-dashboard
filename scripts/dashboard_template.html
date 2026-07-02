@@ -139,6 +139,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 .msel-drop label input[type=checkbox]{width:14px;height:14px;accent-color:var(--sky);cursor:pointer;flex-shrink:0;}
 .msel-all{font-weight:600!important;color:var(--navy)!important;}
 .msel-drop hr{border:none;border-top:1px solid var(--border);margin:4px 0;}
+
+.calls-role-btn{font-size:11px;padding:4px 12px;border:1px solid var(--border);
+  border-radius:20px;cursor:pointer;background:#fff;color:var(--text);}
+.calls-role-btn.act{background:var(--sky);color:#fff;border-color:var(--sky);}
 </style>
 </head>
 <body>
@@ -157,6 +161,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <button class="tab" id="t-scorecard" onclick="show('scorecard',this)">Weekly Overview</button>
   <button class="tab" id="t-eos" onclick="show('eos',this)">EOS Score Card</button>
   <button class="tab" id="t-ceo" onclick="show('ceo',this)">CEO Scorecard</button>
+  <button class="tab" id="t-churn" onclick="show('churn',this)">Churn</button>
+  <button class="tab" id="t-insights" onclick="show('insights',this)">AI Insights</button>
 </div>
 
 <div class="fbar">
@@ -403,7 +409,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="kpi cor" id="kpi-ar"><div class="klbl">A/R % (Jun 2026)</div><div class="kval">0.60%</div><div class="ksub">$38,494 · 57 tenants</div></div>
   </div>
   <div class="g2">
-    <div class="card">
+    <div class="card" style="margin-bottom:16px">
+    <p class="ctitle">Work Order Completion Time by Territory</p>
+    <p class="csub">Average days from Created to Completed</p>
+    <canvas id="c-wo-completion" height="180"></canvas>
+  </div>
+  <div class="card">
       <div class="ctitle">Work Order Status</div><div class="csub">All 5,660 orders by status</div>
       <div class="cw sh"><canvas id="c-wos"></canvas></div>
       <div class="leg" id="wos-leg"></div>
@@ -465,6 +476,20 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   </div>
 </div>
 
+
+  <div class="card" style="margin-top:16px">
+    <p class="ctitle">5-Star Reviews by Platform</p>
+    <p class="csub">Total count per agent per platform</p>
+    <table class="dt" style="font-size:12px">
+      <thead><tr>
+        <th>Agent</th><th style="text-align:center">Total</th>
+        <th style="text-align:center">Yelp OC</th><th style="text-align:center">Google OC</th>
+        <th style="text-align:center">Google SD</th><th style="text-align:center">Yelp SD</th>
+        <th style="text-align:center">Points</th>
+      </tr></thead>
+      <tbody id="reviews-detail-body"></tbody>
+    </table>
+  </div>
 <div class="page" id="growth">
   <p class="ptitle">Business Development</p>
   <p class="psub" id="sub-growth">New owner pipeline · BDM performance · Churn</p>
@@ -524,7 +549,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="kpi"><div class="klbl">Leases Renewed</div><div class="kval">1,092</div><div class="ksub">Jan–Jun 2025</div></div>
   </div>
   <div class="g2">
-    <div class="card">
+  
+  <div class="card" style="margin-bottom:16px">
+    <p class="ctitle">Phone Answer Rate</p>
+    <p class="csub">Incoming calls answered · all roles</p>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="calls-role-btn act" data-role="all" onclick="setCallsRole(this,'all')">All</button>
+      <button class="calls-role-btn" data-role="Property Management" onclick="setCallsRole(this,'Property Management')">Property Mgmt</button>
+      <button class="calls-role-btn" data-role="Leasing" onclick="setCallsRole(this,'Leasing')">Leasing</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div>
+        <table class="dt" style="font-size:12px">
+          <thead><tr><th>Name</th><th>Role</th><th style="text-align:right">Total</th><th style="text-align:right">Answered</th><th style="text-align:center">Answer %</th></tr></thead>
+          <tbody id="calls-lb-body"></tbody>
+        </table>
+      </div>
+      <div>
+        <p style="font-size:12px;font-weight:600;margin-bottom:8px">Answer % Trend by Role</p>
+        <canvas id="c-calls-trend" height="220"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="card">
       <div class="ctitle">5-Star Review Leaderboard</div><div class="csub">Yelp + Google · Baseline totals</div>
       <br>
       <div id="leaderboard"></div>
@@ -586,6 +633,12 @@ document.getElementById = function(id) {
   return document.getElementById_orig(id);
 };
 
+// ── GLOBAL COLOR MAP ─────────────────────────────────────────────────────────
+var TER_COLORS = {
+  'North OC':'#2A7FBF','Mid OC':'#C9A84C','South OC':'#4B7C6F',
+  'SD Properties':'#7B58A6','Commercial':'#D95C3A','STONE':'#4A4A4A',
+  'Elderkin':'#E07B39','Brenden':'#9EAAAD'
+};
 // ── COLORS ────────────────────────────────────────────
 const C = {
   navy:'#0D1B2A', sky:'#2A7FBF', gold:'#C9A84C', coral:'#D95C3A',
@@ -1860,6 +1913,317 @@ function renderCEO() {
   }
 }
 
+
+// ── CALLS (Team Performance enhancement) ──────────────────────────────────────
+function setCallsRole(btn, role) {
+  document.querySelectorAll('.calls-role-btn').forEach(function(b){b.classList.remove('act');});
+  btn.classList.add('act');
+  renderCalls();
+}
+
+function renderCalls() {
+  var lb = document.getElementById('calls-lb-body');
+  var F  = getFilters();
+  if (!lb || !D2.calls_lb) return;
+
+  // Filter leaderboard by role tabs
+  var activeRole = document.querySelector('.calls-role-btn.act');
+  var roleFilter = activeRole ? activeRole.dataset.role : 'all';
+
+  var rows = D2.calls_lb.filter(function(p) {
+    return roleFilter==='all' || p.role===roleFilter;
+  });
+
+  var html = '';
+  rows.forEach(function(p, i) {
+    var bg = i%2===0?'#fff':'#F9F7F3';
+    var pass = p.pct >= 70;
+    var color = pass?'#2E7D53':'#B93B2E';
+    var pbg   = pass?'#E6F4EF':'#FDECEA';
+    html += '<tr style="background:'+bg+'">'+
+      '<td style="padding:6px 12px;font-weight:600">'+p.name+'</td>'+
+      '<td style="padding:6px 12px;font-size:11px;color:var(--muted)">'+p.role+'</td>'+
+      '<td style="text-align:right;padding:6px 12px">'+p.total.toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:6px 12px">'+p.ans.toLocaleString()+'</td>'+
+      '<td style="text-align:center;padding:6px 12px;background:'+pbg+';color:'+color+';font-weight:700">'+p.pct+'%</td>'+
+      '</tr>';
+  });
+  lb.innerHTML = html;
+
+  // Calls trend chart
+  if (D2.calls_trend && Object.keys(D2.calls_trend).length) {
+    var trend = D2.calls_trend;
+    var labels = Object.keys(trend).sort().map(function(k){return k.replace('|',' ');});
+    var pmPct  = Object.keys(trend).sort().map(function(k){
+      var v=trend[k]; return v.pm_total>0?Math.round(v.pm_ans/v.pm_total*1000)/10:null;
+    });
+    var lsPct  = Object.keys(trend).sort().map(function(k){
+      var v=trend[k]; return v.ls_total>0?Math.round(v.ls_ans/v.ls_total*1000)/10:null;
+    });
+    mkChart('c-calls-trend','line',labels,[
+      {label:'Property Mgmt',data:pmPct,borderColor:'#2A7FBF',backgroundColor:'rgba(42,127,191,0.1)',tension:0.3,fill:true},
+      {label:'Leasing',      data:lsPct,borderColor:'#C9A84C',backgroundColor:'rgba(201,168,76,0.1)',tension:0.3,fill:true}
+    ],{scales:{y:{min:0,max:100,ticks:{callback:function(v){return v+'%';}}}}});
+  }
+}
+
+// ── WO COMPLETION (Maintenance enhancement) ────────────────────────────────────
+function renderWOCompletion() {
+  var el = document.getElementById('c-wo-completion');
+  if (!el || !D2.wo_completion) return;
+  var byTer = D2.wo_completion.by_ter || {};
+  var labels = Object.keys(byTer).sort();
+  var vals   = labels.map(function(t){return byTer[t];});
+  var colors = labels.map(function(t){return TER_COLORS[t]||'#aaa';});
+  mkChart('c-wo-completion','bar',labels,
+    [{label:'Avg Days',data:vals,backgroundColor:colors,borderRadius:4}],
+    {plugins:{legend:{display:false}},
+     scales:{y:{title:{display:true,text:'Days'}}}});
+}
+
+// ── CHURN ─────────────────────────────────────────────────────────────────────
+function renderChurn() {
+  var tbody = document.getElementById('churn-tbody');
+  if (!tbody || !D2.churn) return;
+  var F = getFilters();
+  var rows = D2.churn.slice();
+
+  // Apply filters
+  if (F.years.length)  rows=rows.filter(function(r){return F.years.indexOf(r.year)>=0;});
+  if (F.months.length) rows=rows.filter(function(r){return F.months.indexOf(r.month)>=0;});
+  if (F.ters.length)   rows=rows.filter(function(r){return F.ters.indexOf(r.territory)>=0;});
+
+  // KPIs
+  var totalProps = rows.length;
+  var totalUnits = rows.reduce(function(s,r){return s+r.units;},0);
+  var reasonMap  = {};
+  rows.forEach(function(r){reasonMap[r.reason]=(reasonMap[r.reason]||0)+r.units;});
+  var topReason  = Object.keys(reasonMap).sort(function(a,b){return reasonMap[b]-reasonMap[a];})[0]||'—';
+  var topPct     = totalUnits>0?Math.round(reasonMap[topReason]/totalUnits*100)+'%':'—';
+
+  var setT = function(id,v){var el=document.getElementById(id);if(el)el.textContent=v;};
+  setT('churn-total',  totalProps);
+  setT('churn-units',  totalUnits+' units');
+  setT('churn-top-reason', topReason);
+  setT('churn-top-pct', topPct+' of lost units');
+
+  // Reason donut
+  var reasonLabels = Object.keys(reasonMap).sort(function(a,b){return reasonMap[b]-reasonMap[a];});
+  var reasonVals   = reasonLabels.map(function(k){return reasonMap[k];});
+  var REASON_COLORS = ['#2A7FBF','#C9A84C','#3CB371','#E05A4F','#9B59B6','#F39C12'];
+  mkChart('c-churn-reason','doughnut',reasonLabels,
+    [{data:reasonVals,backgroundColor:REASON_COLORS,borderWidth:2,borderColor:'#fff'}],
+    {cutout:'55%',plugins:{legend:{position:'right',labels:{font:{size:11}}}}});
+
+  // Churn % by territory bar chart
+  var portfolio = D2.port_by_ter_current || {};
+  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var terLabels = TERS.filter(function(t){ return portfolio[t]||0; });
+  if (F.ters.length) terLabels = terLabels.filter(function(t){return F.ters.indexOf(t)>=0;});
+
+  var lostByTer = {};
+  rows.forEach(function(r){
+    if(r.territory) lostByTer[r.territory]=(lostByTer[r.territory]||0)+r.units;
+  });
+
+  var churnPcts = terLabels.map(function(t){
+    var lost = lostByTer[t]||0;
+    var cur  = portfolio[t]||0;
+    return (lost+cur)>0 ? Math.round(lost/(lost+cur)*1000)/10 : 0;
+  });
+  var terColors = terLabels.map(function(t){return TER_COLORS[t]||'#aaa';});
+
+  mkChart('c-churn-ter','bar',terLabels,
+    [{label:'Churn %',data:churnPcts,backgroundColor:terColors,borderRadius:4}],
+    {plugins:{legend:{display:false}},
+     scales:{y:{title:{display:true,text:'Churn % (lost / lost+current)'},
+               ticks:{callback:function(v){return v+'%';}}}}});
+
+  // Trend by month
+  var trendMap = {};
+  rows.forEach(function(r){
+    var k=r.year+'|'+r.month;
+    trendMap[k]=(trendMap[k]||0)+r.units;
+  });
+  var tKeys = Object.keys(trendMap).sort();
+  mkChart('c-churn-trend','bar',
+    tKeys.map(function(k){return k.replace('|',' ');}),
+    [{label:'Units Lost',data:tKeys.map(function(k){return trendMap[k];}),
+      backgroundColor:'#E05A4F',borderRadius:4}],
+    {plugins:{legend:{display:false}}});
+
+  // Table
+  var tableHtml = '';
+  rows.sort(function(a,b){return b.end_date.localeCompare(a.end_date);}).forEach(function(r,i){
+    var cur = portfolio[r.territory]||0;
+    var lost = r.units;
+    var pct  = (cur+lost)>0 ? Math.round(lost/(cur+lost)*1000)/10+'%' : '—';
+    var bg=i%2===0?'#fff':'#F9F7F3';
+    tableHtml+='<tr style="background:'+bg+'">'+
+      '<td style="padding:6px 10px;font-size:12px">'+r.address+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px">'+r.territory+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px">'+r.pm+'</td>'+
+      '<td style="text-align:center;padding:6px 10px">'+r.units+'</td>'+
+      '<td style="text-align:center;padding:6px 10px;font-size:11px;color:#B93B2E;font-weight:600">'+pct+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px">'+r.end_date+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px"><span style="background:#FEF0EC;color:#E05A4F;'+
+      'padding:2px 8px;border-radius:4px;font-size:11px">'+r.reason+'</span></td>'+
+      '</tr>';
+  });
+  tbody.innerHTML = tableHtml || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">No data</td></tr>';
+}
+
+// ── REVIEWS DETAIL (NPS & Reviews enhancement) ────────────────────────────────
+function renderReviewsDetail() {
+  var el = document.getElementById('reviews-detail-body');
+  if (!el || !D2.reviews_detail) return;
+  var PLATFORMS = ['YELP OC','GOOGLE OC','Google SD','YELP SD'];
+  var html = '';
+  D2.reviews_detail.forEach(function(r,i){
+    if (!r.total) return;
+    var bg=i%2===0?'#fff':'#F9F7F3';
+    html+='<tr style="background:'+bg+'">'+
+      '<td style="padding:6px 12px;font-weight:600">'+r.name+'</td>'+
+      '<td style="text-align:center;padding:6px 12px;font-weight:700;color:var(--sky)">'+r.total+'</td>';
+    PLATFORMS.forEach(function(p){
+      var v=r[p]||0;
+      html+='<td style="text-align:center;padding:6px 12px">'+(v?v:'—')+'</td>';
+    });
+    html+='<td style="text-align:center;padding:6px 12px;font-weight:600;color:var(--gold)">'+
+      (r.points||0)+'</td></tr>';
+  });
+  el.innerHTML = html;
+}
+
+// ── AI INSIGHTS ────────────────────────────────────────────────────────────────
+function buildDataSummary() {
+  var F = getFilters();
+  var filterDesc = [];
+  if (F.years.length)  filterDesc.push('Years: '+F.years.join(', '));
+  if (F.months.length) filterDesc.push('Months: '+F.months.join(', '));
+  if (F.ters.length)   filterDesc.push('Territories: '+F.ters.join(', '));
+  if (!filterDesc.length) filterDesc.push('All data — no filters applied');
+
+  // Build metrics summary
+  var vacSnap = D2.vac_donut2['eom:|||'] || {};
+  var portSnap= D2.port_counts['eom:|||'] || {};
+  var vacTotal = Object.values(vacSnap).reduce(function(s,v){return s+v;},0);
+  var portTotal= Object.values(portSnap).reduce(function(s,v){return s+v;},0);
+  var vacPct   = portTotal>0 ? (vacTotal/portTotal*100).toFixed(1) : '?';
+
+  var lr_r = DATA.lr_r && DATA.lr_r['|||'] || 0;
+  var lr_m = DATA.lr_m && DATA.lr_m['|||'] || 0;
+  var lrPct = (lr_r+lr_m)>0 ? (lr_r/(lr_r+lr_m)*100).toFixed(1) : '?';
+
+  var nps   = DATA.nps && DATA.nps['|||'];
+  var arPct = DATA.ar_pct && DATA.ar_pct['|||'];
+
+  // WO open count
+  var woOpen = D2.ceo && D2.ceo.wo_open ?
+    Object.values(D2.ceo.wo_open).reduce(function(s,v){return s+(v||0);},0) : '?';
+
+  // Churn summary
+  var churnTotal = D2.churn ? D2.churn.length : 0;
+  var churnUnits = D2.churn ? D2.churn.reduce(function(s,r){return s+r.units;},0) : 0;
+  var reasonMap  = {};
+  if (D2.churn) D2.churn.forEach(function(r){
+    reasonMap[r.reason]=(reasonMap[r.reason]||0)+r.units;
+  });
+  var topReason = Object.keys(reasonMap).sort(function(a,b){return reasonMap[b]-reasonMap[a];})[0]||'—';
+
+  // NPS by territory
+  var npsByTer = [];
+  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  TERS.forEach(function(t){
+    var v = DATA.nps_cum_ter && DATA.nps_cum_ter[t];
+    if (v) {
+      var wes = Object.keys(v).sort();
+      if (wes.length) npsByTer.push(t+': '+v[wes[wes.length-1]]);
+    }
+  });
+
+  // Vacancy by territory
+  var vacByTer = [];
+  var port = D2.port_counts['eom:|||']||{};
+  var vac  = D2.vac_donut2['eom:|||']||{};
+  TERS.forEach(function(t){
+    if (port[t]) vacByTer.push(t+': '+(vac[t]||0)+'/'+port[t]+' = '+((vac[t]||0)/port[t]*100).toFixed(1)+'%');
+  });
+
+  var summary = [
+    'AllView Real Estate Property Management Dashboard Analysis',
+    'Filter: '+filterDesc.join(' | '),
+    '',
+    'KEY METRICS (all-time unless filtered):',
+    '• Overall Vacancy Rate: '+vacPct+'% ('+vacTotal+' vacant / '+portTotal+' total units)',
+    '• Lease Renewal Rate: '+lrPct+'% ('+lr_r+' renewed, '+lr_m+' move-outs)',
+    '• NPS Score (cumulative): '+(nps!=null?nps:'no data'),
+    '• AR% (Accounts Receivable): '+(arPct!=null?arPct+'%':'no data'),
+    '• Open Work Orders: '+woOpen,
+    '• Churn: '+churnTotal+' properties lost ('+churnUnits+' units) — top reason: '+topReason,
+    '',
+    'VACANCY BY TERRITORY:',
+    Object.keys(vac).filter(function(t){return port[t];}).map(function(t){
+      return '• '+t+': '+(vac[t]||0)+' vacant / '+port[t]+' total = '+((vac[t]||0)/port[t]*100).toFixed(1)+'%';
+    }).join('\n'),
+    '',
+    'NPS BY TERRITORY (cumulative):',
+    npsByTer.map(function(s){return '• '+s;}).join('\n'),
+    '',
+    'Please provide:',
+    '1) A 2-3 sentence executive performance summary',
+    '2) Top 3 concerns with specific numbers',
+    '3) Top 3 positive trends',
+    '4) Top 3 actionable recommendations for the CEO',
+    'Keep it concise and data-driven. Use direct language suited for a CEO briefing.'
+  ].join('\n');
+
+  return summary;
+}
+
+function runInsights() {
+  var output = document.getElementById('insights-output');
+  var placeholder = document.getElementById('insights-placeholder');
+  if (!output) return;
+
+  var summary = buildDataSummary();
+
+  // Show the data summary in the output box for copy-paste
+  if (placeholder) placeholder.style.display='none';
+  output.innerHTML =
+    '<div style="margin-bottom:12px;padding:10px 14px;background:#EAF4FB;border-radius:8px;font-size:12px;color:var(--navy)">' +
+    '<strong>Data summary ready.</strong> Copy the text below and paste it into Claude.ai, ' +
+    'or click <strong>Open in Claude.ai</strong> to open it pre-loaded.' +
+    '</div>' +
+    '<textarea id="insights-textarea" style="width:100%;height:340px;font-size:11px;font-family:monospace;' +
+    'border:1px solid var(--border);border-radius:6px;padding:10px;resize:vertical;color:var(--text)">' +
+    summary.replace(/</g,"&lt;").replace(/>/g,"&gt;") +
+    '</textarea>' +
+    '<button onclick="copyInsights()" style="margin-top:8px;padding:7px 16px;background:var(--navy);' +
+    'color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">⎘ Copy to clipboard</button>';
+}
+
+function copyInsights() {
+  var ta = document.getElementById('insights-textarea');
+  if (ta) { ta.select(); document.execCommand('copy');
+    var btn = ta.nextElementSibling;
+    if (btn) { btn.textContent='✓ Copied!'; setTimeout(function(){btn.textContent='⎘ Copy to clipboard';},2000); }
+  }
+}
+
+function openInClaude() {
+  var summary = buildDataSummary();
+  var encoded = encodeURIComponent(summary);
+  // Claude.ai new conversation with pre-filled message
+  var url = 'https://claude.ai/new?q=' + encoded.substring(0, 2000); // URL length limit
+  window.open(url, '_blank');
+}
+
+// ── PRINT / PDF EXPORT ─────────────────────────────────────────────────────────
+function printDashboard() {
+  window.print();
+}
+
 // ── TAB SWITCHING ─────────────────────────────────────
 function show(id, btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -1867,7 +2231,7 @@ function show(id, btn) {
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
   // Re-render charts now that the tab is visible
-  setTimeout(function(){ render(); renderStatic(); renderScorecard(); renderEOS(); renderCEO(); }, 50);
+  setTimeout(function(){ render(); renderStatic(); renderScorecard(); renderEOS(); renderCEO(); renderCalls(); renderWOCompletion(); renderChurn(); renderReviewsDetail(); }, 50);
 }
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
@@ -1950,6 +2314,10 @@ function applyF() {
   renderScorecard();
   renderEOS();
   renderCEO();
+  renderCalls();
+  renderWOCompletion();
+  renderChurn();
+  renderReviewsDetail();
 }
 
 function resetF() {
@@ -1969,6 +2337,12 @@ function resetF() {
   render();
   renderStatic();
   renderScorecard();
+  renderEOS();
+  renderCEO();
+  renderCalls();
+  renderWOCompletion();
+  renderChurn();
+  renderReviewsDetail();
 }
 
 // ── BOOT ──────────────────────────────────────────────
@@ -1978,6 +2352,10 @@ window.addEventListener('load', function() {
   renderScorecard();
   renderEOS();
   renderCEO();
+  renderCalls();
+  renderWOCompletion();
+  renderChurn();
+  renderReviewsDetail();
 });
 </script>
 
@@ -2047,6 +2425,57 @@ window.addEventListener('load', function() {
       </div>
     </div>
 
+  </div>
+</div>
+
+<div class="page" id="churn">
+  <p class="ptitle">Property Churn</p>
+  <p class="psub">Lost properties · termination reasons and PM accountability</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px">
+    <div class="kpi nvy"><div class="klbl">Total Lost Properties</div><div class="kval" id="churn-total">—</div><div class="ksub">All time</div></div>
+    <div class="kpi cor"><div class="klbl">Total Lost Units</div><div class="kval" id="churn-units">—</div><div class="ksub">Including multi-unit</div></div>
+    <div class="kpi"><div class="klbl">Most Common Reason</div><div class="kval" id="churn-top-reason" style="font-size:16px">—</div><div class="ksub" id="churn-top-pct">—</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    <div class="card"><p class="ctitle">Loss Reasons</p><canvas id="c-churn-reason" height="220"></canvas></div>
+    <div class="card"><p class="ctitle">Churn % by Territory</p><p class="csub">Lost units ÷ (lost + current)</p><canvas id="c-churn-ter" height="220"></canvas></div>
+    <div class="card" style="grid-column:1/-1"><p class="ctitle">Churn Over Time</p><p class="csub">Properties lost per month</p><canvas id="c-churn-trend" height="180"></canvas></div>
+  </div>
+  <div class="card">
+    <p class="ctitle">Lost Properties Detail</p>
+    <div style="overflow-x:auto">
+    <table class="dt" id="churn-table">
+      <thead><tr>
+        <th>Property</th><th>Territory</th><th>PM</th><th>Units</th><th>Churn %</th>
+        <th>End Date</th><th>Reason</th>
+      </tr></thead>
+      <tbody id="churn-tbody"></tbody>
+    </table>
+    </div>
+  </div>
+</div>
+<div class="page" id="insights">
+  <p class="ptitle">AI Insights</p>
+  <p class="psub">Week-over-week analysis · trends · recommendations</p>
+  <div style="margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button onclick="runInsights()" style="background:var(--sky);color:#fff;border:none;
+      padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      ✦ Analyze with Claude
+    </button>
+    <button onclick="openInClaude()" style="background:transparent;color:var(--sky);border:1px solid var(--sky);
+      padding:10px 22px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+      ↗ Open in Claude.ai
+    </button>
+    <span style="font-size:12px;color:var(--muted)">Powered by Claude · data summary sent to AI</span>
+    <span id="insights-loading" style="display:none;font-size:12px;color:var(--sky)">Analyzing...</span>
+  </div>
+  <div id="insights-output" style="background:#fff;border:1px solid var(--border);border-radius:12px;
+    padding:24px;min-height:200px;font-size:13px;line-height:1.7;color:var(--text)">
+    <div id="insights-static"></div>
+    <p id="insights-placeholder" style="color:var(--muted);font-style:italic">
+      Click <strong>Analyze with Claude</strong> to generate a data summary you can paste into Claude,<br>
+      or click <strong>Open in Claude.ai</strong> to open it directly with the analysis pre-loaded.
+    </p>
   </div>
 </div>
 </body>
