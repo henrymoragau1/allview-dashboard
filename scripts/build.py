@@ -44,13 +44,26 @@ def read_sheet(path, sheet=0):
     return rows
 
 def eom_we_map(rows, year_col, month_col, we_col):
-    by_month = defaultdict(list)
-    for r in rows:
-        if not r or not r[we_col] or not hasattr(r[we_col],'strftime'): continue
-        key = (str(r[year_col]).strip() if r[year_col] else '',
-               str(r[month_col]).strip() if r[month_col] else '')
-        by_month[key].append(r[we_col])
-    return {key: max(dates) for key, dates in by_month.items()}
+    # EOM WE = last WE in each calendar month, EXCLUDING WEs on the last day of the month
+    # (WEs on month's last day are treated as first week of next month in reporting)
+    import calendar as cal_mod
+    MNAMES={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+            7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
+    all_wes=list(set(r[we_col] for r in rows if r and r[we_col] and hasattr(r[we_col],'strftime')))
+    eom={}
+    for yr in range(2024,2028):
+        for mo_num in range(1,13):
+            last_day=cal_mod.monthrange(yr,mo_num)[1]
+            month_wes=[w for w in all_wes if w.year==yr and w.month==mo_num and w.day<last_day]
+            if month_wes: eom[(str(yr),MNAMES[mo_num])]=max(month_wes)
+    return eom
+
+def get_eom_key(we_dt, eom):
+    import calendar as cal_mod
+    MNAMES={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+            7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
+    yr=str(we_dt.year); mo=MNAMES[we_dt.month]
+    return (yr,mo) if eom.get((yr,mo))==we_dt else None
 
 def agg_keys(year, month, ter, prop):
     y,m,t,p = year,month,ter,prop
@@ -210,8 +223,8 @@ ut_rows=read_sheet(FILES['unit_turn'],'Unit Turn Details')
 ut_tbl=defaultdict(lambda:{'sum':0,'cnt':0})
 for r in ut_rows[1:]:
     if not r or not r[17]: continue
-    if r[16] is not None and str(r[16]).strip()!='': continue
-    if r[25] is None: continue
+    if r[16] is not None and str(r[16]).strip()!='': continue  # blank comment
+    if not r[25]: continue  # posted to internet at must have a date
     attrs=resolve(r[0]) or {}
     ter=attrs.get('territory',''); prop=attrs.get('proptype','')
     days=r[17] if isinstance(r[17],(int,float)) else 0
@@ -234,6 +247,37 @@ for r in nps_rows[1:]:
     for k in agg_keys(year,month,ter,''):
         nps_raw[k]['P']+=p; nps_raw[k]['D']+=d; nps_raw[k]['T']+=t
 DATA['nps']={k:round((v['P']-v['D'])/v['T']*100,1) for k,v in nps_raw.items() if v['T']>0}
+
+# ── NPS CUMULATIVE BY TERRITORY PER WE ───────────────────────────────────────
+# Used by CEO Scorecard for all-period cumulative NPS
+nps_rows2=read_sheet(FILES['new_nps'])
+nps_we_entries=defaultdict(list)
+for r in nps_rows2[1:]:
+    if not r or not r[35] or not hasattr(r[35],'strftime'): continue
+    p=1 if r[39]==1 else 0; d=1 if r[41]==1 else 0; pa=1 if r[40]==1 else 0
+    t=p+pa+d
+    if t==0: continue
+    ter=str(r[11]).strip() if r[11] else ''
+    nps_we_entries[r[35].strftime('%Y-%m-%d')].append({'ter':ter,'p':p,'d':d,'t':t})
+
+nps_all_wes=sorted(nps_we_entries.keys())
+TERS_NPS=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
+ter_run=defaultdict(lambda:{'P':0,'D':0,'T':0})
+all_run={'P':0,'D':0,'T':0}
+nps_cum_ter={ter:{} for ter in TERS_NPS}
+nps_cum_all={}
+for we in nps_all_wes:
+    for e in nps_we_entries[we]:
+        ter=e['ter']
+        all_run['P']+=e['p']; all_run['D']+=e['d']; all_run['T']+=e['t']
+        if ter in SKIP_TERS: continue
+        ter_run[ter]['P']+=e['p']; ter_run[ter]['D']+=e['d']; ter_run[ter]['T']+=e['t']
+    for ter in TERS_NPS:
+        v=ter_run[ter]
+        nps_cum_ter[ter][we]=round((v['P']-v['D'])/v['T']*100,1) if v['T']>0 else None
+    nps_cum_all[we]=round((all_run['P']-all_run['D'])/all_run['T']*100,1) if all_run['T']>0 else None
+DATA['nps_cum_ter']=nps_cum_ter
+DATA['nps_cum_all']=nps_cum_all
 print(f"  DATA: {list(DATA.keys())}")
 
 print("[4/7] Computing D2 tables...")
@@ -345,6 +389,49 @@ for r in app_rows[1:]:
         ltl_tbl[k]['sum']+=days; ltl_tbl[k]['cnt']+=1
 DATA['ltl']={k:round(v['sum']/v['cnt'],1) for k,v in ltl_tbl.items() if v['cnt']>0}
 
+# ── LTL BY AGENT with time keys ───────────────────────────────────────────────
+ltl_agent_tbl=defaultdict(lambda:defaultdict(lambda:{'sum':0,'cnt':0}))
+for r in app_rows[1:]:
+    if not r or r[36] is None: continue
+    days=r[36] if isinstance(r[36],(int,float)) and r[36]>=0 else None
+    if days is None: continue
+    agent=str(r[13]).strip() if r[13] else ''
+    if not agent or agent in ('--','Brenden'): continue
+    yr=str(r[30]).strip() if r[30] else ''
+    mo=str(r[29]).strip() if r[29] else ''
+    we=r[31].strftime('%Y-%m-%d') if r[31] and hasattr(r[31],'strftime') else ''
+    for k in [f"|||",f"{yr}|||",f"|{mo}||",f"{yr}|{mo}||"]:
+        ltl_agent_tbl[agent][k]['sum']+=days; ltl_agent_tbl[agent][k]['cnt']+=1
+    if we:
+        ltl_agent_tbl[agent][f"||{we}|"]['sum']+=days
+        ltl_agent_tbl[agent][f"||{we}|"]['cnt']+=1
+DATA['ltl_agent']={a:{k:round(v['sum']/v['cnt'],1) for k,v in kv.items() if v['cnt']>0}
+                    for a,kv in ltl_agent_tbl.items()}
+
+# ── PHONE ANSWER % BY AGENT with time keys ────────────────────────────────────
+ANSWERED_PH={'Answered','Connected','Accepted','Call connected'}
+phone_rows=read_sheet(FILES['phone'])
+phone_agent_tbl=defaultdict(lambda:defaultdict(lambda:{'total':0,'ans':0}))
+for r in phone_rows[1:]:
+    if not r or str(r[1]).strip()!='Incoming': continue
+    name=str(r[16]).strip() if r[16] else ''
+    role=str(r[17]).strip() if r[17] else ''
+    result=str(r[10]).strip() if r[10] else ''
+    if not name or role!='Leasing': continue
+    yr=str(r[23]).strip() if r[23] else ''
+    mo=str(r[22]).strip() if r[22] else ''
+    we=r[20].strftime('%Y-%m-%d') if r[20] and hasattr(r[20],'strftime') else ''
+    is_ans=result in ANSWERED_PH
+    for k in [f"|||",f"{yr}|||",f"|{mo}||",f"{yr}|{mo}||"]:
+        phone_agent_tbl[name][k]['total']+=1
+        if is_ans: phone_agent_tbl[name][k]['ans']+=1
+    if we:
+        phone_agent_tbl[name][f"||{we}|"]['total']+=1
+        if is_ans: phone_agent_tbl[name][f"||{we}|"]['ans']+=1
+DATA['phone_agent']={name:{k:round(v['ans']/v['total']*100,1) if v['total'] else None
+                            for k,v in kv.items()}
+                      for name,kv in phone_agent_tbl.items()}
+
 # WO status + issues
 wo_st=defaultdict(lambda:defaultdict(int))
 wo_is=defaultdict(lambda:defaultdict(int))
@@ -365,6 +452,22 @@ D2['wo_issues']={k:dict(sorted(v.items(),key=lambda x:-x[1])[:10]) for k,v in wo
 # Concessions
 con_rows=read_sheet(FILES['concessions'])
 D2['concessions']=[]
+
+# ── CONCESSIONS AGGREGATION (for CEO scorecard filters) ──────────────────────
+con_agg=defaultdict(float)
+for r in con_rows[1:]:
+    if not r or not r[1]: continue
+    try: amt=float(str(r[1]).replace(',','').replace('$',''))
+    except: amt=0
+    if amt==0: continue
+    month=str(r[3]).strip() if r[3] else ''
+    year =str(r[5]).strip() if r[5] else ''
+    prop_addr=str(r[7]).strip() if r[7] else str(r[0]).strip()
+    attrs=resolve(prop_addr) or {}
+    ter=attrs.get('territory',''); pt=attrs.get('proptype','')
+    if ter in SKIP_TERS: ter=''
+    for k in agg_keys(year,month,ter,pt): con_agg[k]+=amt
+DATA['concessions_agg']={k:round(v,2) for k,v in con_agg.items()}
 for r in con_rows[1:]:
     if not r or not r[0]: continue
     attrs=resolve(r[7] or r[0]) or {}
@@ -378,12 +481,15 @@ for r in con_rows[1:]:
 
 # Unpaid (EOM)
 up_rows=read_sheet(FILES['unpaid'])
+MNAMES2={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+         7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
 up_eom=eom_we_map(up_rows,15,14,16)
 up_flat=[]; up_totals=defaultdict(lambda:{'total':0.0,'count':0})
 for r in up_rows[1:]:
     if not r or not r[16] or not hasattr(r[16],'strftime'): continue
-    year=str(r[15]).strip(); month=str(r[14]).strip(); we=r[16]
-    if up_eom.get((year,month))!=we: continue
+    eom_key=get_eom_key(r[16],up_eom)
+    if not eom_key: continue
+    year,month=eom_key
     amt=r[8] if isinstance(r[8],(int,float)) and r[8] and r[8]>0 else 0
     if amt==0: continue
     attrs=resolve(r[1] or r[0]) or {}
@@ -401,16 +507,20 @@ D2['up_totals']={k:{'total':round(v['total'],2),'count':v['count']} for k,v in u
 
 # Rent roll
 rr_rows=read_sheet(FILES['rent_roll'])
+MNAMES3={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+         7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
+rr_eom=eom_we_map(rr_rows,20,19,21)
 rr_rent=defaultdict(float); rr_count=defaultdict(int)
 for r in rr_rows[1:]:
-    if not r or not r[0]: continue
-    ter=str(r[22]).strip() if r[22] else ''
-    year=str(r[20]).strip() if r[20] else ''
-    month=str(r[19]).strip() if r[19] else ''
+    if not r or not r[0] or not r[21] or not hasattr(r[21],'strftime'): continue
+    eom_key=get_eom_key(r[21],rr_eom)
+    if not eom_key: continue
+    year,month=eom_key
+    attrs=resolve(str(r[0]).strip()) or {}
+    ter=attrs.get('territory',''); pt=attrs.get('proptype','')
+    if ter in SKIP_TERS: ter=''
     rent=r[9] if isinstance(r[9],(int,float)) and r[9] and r[9]>0 else 0
-    for k in [f"{year}|{month}|{ter}|",f"{year}|{month}||",
-              f"|{month}|{ter}|",f"|{month}||",
-              f"{year}||{ter}|",f"{year}|||",f"||{ter}|","|||"]:
+    for k in agg_keys(year,month,ter,pt):
         rr_rent[k]+=rent; rr_count[k]+=1
 D2['rr_rent']={k:round(v,2) for k,v in rr_rent.items()}
 D2['rr_count']=dict(rr_count)
