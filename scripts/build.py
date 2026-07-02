@@ -30,6 +30,9 @@ FILES = {
     'new_nps':      os.path.join(DATA_DIR, 'New_NPS_Data.xlsx'),
     'concessions':  os.path.join(DATA_DIR, 'Owner_Concessions.xlsx'),
     'rent_roll':    os.path.join(DATA_DIR, 'Rent_Roll.xlsx'),
+    'phone':        os.path.join(DATA_DIR, 'Phone_Reporting.xlsx'),
+    'term':         os.path.join(DATA_DIR, 'property_directory-Term.xlsx'),
+    'guest_card':   os.path.join(DATA_DIR, 'guest_card_inquiries-Performance.xlsx'),
 }
 
 missing = [k for k,v in FILES.items() if not os.path.exists(v)]
@@ -697,7 +700,7 @@ for r in rr_rows2[1:]:
 ar_pct_we2={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if rr_by_we2.get(we,0)>0}
 
 # Showing conversion from guest card
-gc_rows=read_sheet(os.path.join(DATA_DIR,'guest_card_inquiries-Performance.xlsx'))
+gc_rows=read_sheet(FILES['guest_card'])
 gc_we=defaultdict(lambda:{'total':0,'with_showing':0})
 for r in gc_rows[1:]:
     if not r or not r[15] or not hasattr(r[15],'strftime'): continue
@@ -793,6 +796,69 @@ for we in all_sc_we:
     })
 D2['eos']=eos_rows
 print(f"  scorecard rows: {len(scorecard_rows)}, eos rows: {len(eos_rows)}")
+
+
+# ── CEO SCORECARD DATA ────────────────────────────────────────────────────────
+print("[4d/7] Computing CEO scorecard data...")
+
+# Lost units by territory from property_directory-Term
+term_rows=read_sheet(FILES['term'])
+lost_ter=defaultdict(int)
+for r in term_rows[1:]:
+    if not r or not r[0]: continue
+    ter=(resolve(str(r[0]).strip()) or {}).get('territory','')
+    if ter and ter not in SKIP_TERS:
+        units=int(r[3]) if isinstance(r[3],(int,float)) else 1
+        lost_ter[ter]+=units
+
+# Open WO by territory
+OPEN_ST={'Assigned','Estimate Requested','New','Scheduled','Waiting','Work Done'}
+wo_rows2=read_sheet(FILES['work_orders'])
+wo_open_ter=defaultdict(int)
+for r in wo_rows2[1:]:
+    if not r or not r[10]: continue
+    if str(r[10]).strip() not in OPEN_ST: continue
+    ter=(resolve(r[0]) if r[0] else {}).get('territory','')
+    if ter and ter not in SKIP_TERS: wo_open_ter[ter]+=1
+
+# Phone answer % by territory and by leasing agent
+ANSWERED_SET={'Answered','Connected','Accepted','Call connected'}
+phone_rows2=read_sheet(FILES['phone'])
+phone_ter=defaultdict(lambda:{'total':0,'ans':0})
+staff_ter_map=defaultdict(set)
+# Build staff→territory mapping from portfolio
+for r in port_rows[1:]:
+    if not r: continue
+    ter=str(r[6]).strip() if r[6] else ''
+    if ter in SKIP_TERS: continue
+    for col in [7,8,9,10]:
+        if r[col] and str(r[col]).strip() not in ('TBD','','Commercial','STONE PM'):
+            staff_ter_map[str(r[col]).strip()].add(ter)
+
+for r in phone_rows2[1:]:
+    if not r or str(r[1]).strip()!='Incoming': continue
+    name=str(r[16]).strip() if r[16] else ''
+    result=str(r[10]).strip() if r[10] else ''
+    is_ans=result in ANSWERED_SET
+    for ter in staff_ter_map.get(name,set()):
+        phone_ter[ter]['total']+=1
+        if is_ans: phone_ter[ter]['ans']+=1
+
+phone_pct_ter={ter:round(v['ans']/v['total']*100,1) if v['total'] else None
+                for ter,v in phone_ter.items()}
+
+TERS_CEO=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
+D2['ceo']={
+    'latest_we':  D2.get('latest_we',''),
+    'ters':       TERS_CEO,
+    'phone_ter':  {t:phone_pct_ter.get(t) for t in TERS_CEO},
+    'wo_open':    {t:wo_open_ter.get(t,0) for t in TERS_CEO},
+    'lost_units': {t:lost_ter.get(t,0) for t in TERS_CEO},
+    'concessions':{t:round(DATA.get('concessions_agg',{}).get(f'||{t}|',0),0) for t in TERS_CEO},
+    'ltl_agent':  DATA.get('ltl_agent',{}),
+    'phone_agent':DATA.get('phone_agent',{}),
+}
+print(f"  CEO data built: phone_ter={phone_pct_ter}")
 
 print("[5/7] Reading HTML template...")
 if not os.path.exists(TEMPLATE_PATH):
