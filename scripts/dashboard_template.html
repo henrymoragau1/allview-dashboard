@@ -156,6 +156,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   <button class="tab"     id="t-team"         onclick="show('team',this)">Team Performance</button>
   <button class="tab" id="t-scorecard" onclick="show('scorecard',this)">Weekly Overview</button>
   <button class="tab" id="t-eos" onclick="show('eos',this)">EOS Score Card</button>
+  <button class="tab" id="t-ceo" onclick="show('ceo',this)">CEO Scorecard</button>
 </div>
 
 <div class="fbar">
@@ -1607,6 +1608,258 @@ function renderEOS() {
   tbody.innerHTML = out;
 }
 
+
+// ── CEO SCORECARD ─────────────────────────────────────────────────────────────
+function renderCEO() {
+  var pmBody   = document.getElementById('ceo-pm-body');
+  var leasBody = document.getElementById('ceo-leasing-body');
+  var asof     = document.getElementById('ceo-asof');
+  if (!pmBody) return;
+
+  // ── Read filters ────────────────────────────────────────────────────────────
+  var F  = getFilters();
+  var y  = F.years.length  === 1 ? F.years[0]  : '';
+  var mo = F.months.length === 1 ? F.months[0] : '';
+  var we = F.wes.length    === 1 ? F.wes[0]    : '';
+  var pt = F.pts.length    === 1 ? F.pts[0]    : '';
+
+  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+
+  // ── Snapshot key for vacancy ─────────────────────────────────────────────────
+  var snapKey;
+  if (we)          snapKey = 'we:' + we;
+  else if (y && mo) snapKey = 'eom:' + y + '|' + mo;
+  else if (mo)      snapKey = 'eom:|' + mo;
+  else if (y)       snapKey = 'eom:' + y + '|';
+  else              snapKey = 'eom:|||';
+
+  var vacSnap  = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||'] || {};
+  var portSnap = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
+
+  // Override with proptype if selected
+  if (pt) {
+    var ptWE = we || D2.latest_we;
+    TERS.forEach(function(ter) {
+      var pv = ((D2.port_pt[ptWE] || {})[ter] || {})[pt];
+      var vv = ((D2.vac_pt[ptWE]  || {})[ter] || {})[pt];
+      if (pv != null) portSnap[ter] = pv;
+      if (vv != null) vacSnap[ter]  = vv;
+    });
+  }
+
+  // Snapshot date label
+  var latestWE = we || D2.latest_we || '';
+  if (asof) asof.textContent = 'High-level KPIs · as of WE ' + latestWE;
+
+  // ── lk helper (same as main render) ────────────────────────────────────────
+  function lkTer(table, ter) {
+    var k = (y||'')+'|'+(mo||'')+'|'+ter+'|'+(pt||'');
+    var d = DATA[table] || D2[table] || {};
+    return d[k] != null ? d[k] : (d[(y||'')+'|'+(mo||'')+'|'+ter+'|'] != null ? d[(y||'')+'|'+(mo||'')+'|'+ter+'|'] : null);
+  }
+
+  // ── Build metric values per territory ────────────────────────────────────────
+  function vacPct(ter) {
+    var v = vacSnap[ter]  || 0;
+    var p = portSnap[ter] || 0;
+    return p > 0 ? Math.round(v/p*1000)/10 : null;
+  }
+
+  function lrPct(ter) {
+    var r = lkTer('lr_r', ter); var m = lkTer('lr_m', ter);
+    if (r == null && m == null) return null;
+    r = r||0; m = m||0;
+    return (r+m)>0 ? Math.round(r/(r+m)*1000)/10 : null;
+  }
+
+  function npsScore(ter) {
+    var k=(y||'')+'|'+(mo||'')+'|'+ter+'|';
+    return DATA.nps[k] != null ? DATA.nps[k] : null;
+  }
+
+  function arPct(ter) {
+    // AR% = sum(EOM unpaid) / sum(rent roll) across all selected year+month combos
+    // When multiple months/years selected: sum each EOM result then divide
+    var MONTHS_LIST = F.months.length ? F.months :
+      ['January','February','March','April','May','June',
+       'July','August','September','October','November','December'];
+    var YEARS_LIST  = F.years.length  ? F.years  : ['2025','2026'];
+
+    var totalUp = 0; var totalRR = 0; var hasData = false;
+    var up = D2.up_totals || {}; var rr = D2.rr_rent || {};
+
+    YEARS_LIST.forEach(function(yr) {
+      MONTHS_LIST.forEach(function(mo2) {
+        var k1 = yr+'|'+mo2+'|'+ter+'|'+(pt||'');
+        var k2 = yr+'|'+mo2+'|'+ter+'|';
+        var upV = (up[k1]||up[k2]);
+        var rrV = (rr[k1]||rr[k2]);
+        if (upV && rrV && rrV > 0) {
+          totalUp += upV.total; totalRR += rrV; hasData = true;
+        }
+      });
+    });
+
+    // If no month/year filters, use all-time territory key
+    if (!hasData || (!F.months.length && !F.years.length)) {
+      var kAll = '||'+ter+'|'+(pt||'');
+      var kAll2 = '||'+ter+'|';
+      var upA = up[kAll]||up[kAll2];
+      var rrA = rr[kAll]||rr[kAll2];
+      if (upA && rrA && rrA>0) return Math.round(upA.total/rrA*10000)/100;
+      return null;
+    }
+    return hasData && totalRR > 0 ? Math.round(totalUp/totalRR*10000)/100 : null;
+  }
+
+  function utAvg(ter) {
+    var k=(y||'')+'|'+(mo||'')+'|'+ter+'|'+(pt||'');
+    return DATA.ut[k] != null ? DATA.ut[k] : (DATA.ut[(y||'')+'|'+(mo||'')+'|'+ter+'|']||null);
+  }
+
+  function rentUnit(ter) {
+    var k=(y||'')+'|'+(mo||'')+'|'+ter+'|'+(pt||'');
+    return D2.rr_avg[k] != null ? D2.rr_avg[k] : (D2.rr_avg[(y||'')+'|'+(mo||'')+'|'+ter+'|']||null);
+  }
+
+  // Static data from D2.ceo (phone, concessions, lost units, WO — not filterable by these dimensions)
+  var c = D2.ceo || {};
+
+  // ── Cell renderers ────────────────────────────────────────────────────────────
+  function cell(val, good_fn, fmt) {
+    if (val == null) return '<td style="text-align:center;color:#bbb;padding:5px 8px;font-size:12px">—</td>';
+    var pass  = good_fn ? good_fn(val) : null;
+    var color = pass === true ? '#2E7D53' : pass === false ? '#B93B2E' : 'var(--text)';
+    var bg    = pass === true ? '#E6F4EF' : pass === false ? '#FDECEA' : 'transparent';
+    return '<td style="text-align:center;background:'+bg+';color:'+color+';font-weight:700;padding:5px 8px;font-size:12px">'+(fmt?fmt(val):val)+'</td>';
+  }
+  function rowLabel(txt, sub) {
+    return '<td style="padding:7px 12px;font-weight:600;white-space:nowrap;border-right:1px solid #e0dbd0;font-size:12px">'
+      + txt + (sub ? '<div style="font-size:10px;color:var(--muted);font-weight:400">'+sub+'</div>' : '') + '</td>';
+  }
+  function rowBg(i) { return i%2===0 ? '#fff' : '#F9F7F3'; }
+
+  // ── Property Management rows ─────────────────────────────────────────────────
+  var pmRows = [
+    { lbl:'Vacancy %',           sub:'Vacant / Portfolio at WE',
+      vals:function(ter){ return vacPct(ter); },
+      good:function(v){ return v<=5; },  fmt:function(v){ return v.toFixed(1)+'%'; } },
+    { lbl:'Lease Renewal %',     sub:'Renewed / (Renewed + Move-Out)',
+      vals:function(ter){ return lrPct(ter); },
+      good:function(v){ return v>=80; }, fmt:function(v){ return v.toFixed(1)+'%'; } },
+    { lbl:'Concessions $',       sub:'Total owner concessions',
+      vals:function(ter){
+        var k=(y||'')+'|'+(mo||'')+'|'+ter+'|'+(pt||'');
+        var d=DATA.concessions_agg||{};
+        var v=d[k]!=null?d[k]:(d[(y||'')+'|'+(mo||'')+'|'+ter+'|']!=null?d[(y||'')+'|'+(mo||'')+'|'+ter+'|']:null);
+        return v;
+      },
+      good:null, fmt:function(v){ return '$'+v.toLocaleString(undefined,{maximumFractionDigits:0}); } },
+    { lbl:'NPS Score',           sub:'Cumulative all-period up to filter',
+      vals:function(ter){
+        // Use cumulative NPS — find the latest WE at or before the selected cutoff
+        var cumMap = DATA.nps_cum_ter ? DATA.nps_cum_ter[ter] : null;
+        if (!cumMap) return null;
+        var wes = Object.keys(cumMap).sort();
+        if (!wes.length) return null;
+        // Filter WEs by year/month selection
+        var filtered = wes.filter(function(w) {
+          if (F.years.length  && F.years.indexOf(w.slice(0,4)) < 0) return false;
+          if (F.months.length) {
+            var MO_MAP={January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
+                        July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
+            var moNums=F.months.map(function(m){return MO_MAP[m];});
+            if (moNums.indexOf(w.slice(5,7))<0) return false;
+          }
+          if (F.wes.length && F.wes.indexOf(w)<0) return false;
+          return true;
+        });
+        if (!filtered.length) {
+          // No filter — use absolute latest
+          return cumMap[wes[wes.length-1]];
+        }
+        // Return cumulative value at the LATEST matching WE
+        return cumMap[filtered[filtered.length-1]];
+      },
+      good:function(v){ return v>=40; }, fmt:function(v){ return v.toFixed(1); } },
+    { lbl:'Phone Answer %',      sub:'Answered / Incoming calls',
+      vals:function(ter){ return c.phone_ter ? c.phone_ter[ter] : null; },
+      good:function(v){ return v>=70; }, fmt:function(v){ return v.toFixed(1)+'%'; } },
+    { lbl:'Avg Rent / Unit',     sub:'Rent Roll avg',
+      vals:function(ter){ return rentUnit(ter); },
+      good:function(v){ return v>=3000; },fmt:function(v){ return '$'+v.toFixed(0); } },
+    { lbl:'Open Work Orders',    sub:'Active WO count',
+      vals:function(ter){ return c.wo_open ? c.wo_open[ter]||0 : null; },
+      good:function(v){ return v<=40; }, fmt:function(v){ return v; } },
+    { lbl:'Lost Units',          sub:'From property_directory-Term',
+      vals:function(ter){ return c.lost_units ? (c.lost_units[ter]||0) : null; },
+      good:null,                         fmt:function(v){ return v; } },
+    { lbl:'AR %',                sub:'Unpaid / Rent Roll',
+      vals:function(ter){ return arPct(ter); },
+      good:function(v){ return v<=1; },  fmt:function(v){ return v.toFixed(2)+'%'; } },
+    { lbl:'Unit Turn (avg days)',sub:'Blank comments, all turns',
+      vals:function(ter){ return utAvg(ter); },
+      good:function(v){ return v<=15; }, fmt:function(v){ return v.toFixed(1)+'d'; } },
+  ];
+
+  var pmHtml = '';
+  pmRows.forEach(function(m, i) {
+    pmHtml += '<tr style="background:'+rowBg(i)+'">';
+    pmHtml += rowLabel(m.lbl, m.sub);
+    TERS.forEach(function(ter) {
+      pmHtml += cell(m.vals(ter), m.good, m.fmt);
+    });
+    pmHtml += '</tr>';
+  });
+  pmBody.innerHTML = pmHtml;
+
+  // ── Leasing rows ─────────────────────────────────────────────────────────────
+  if (leasBody) {
+    var agents = Object.keys(DATA.ltl_agent||{}).filter(function(n){ return n!=='--' && n!=='Brenden'; }).sort();
+    var hdrRow = document.querySelector('#ceo-leasing-table thead tr');
+    if (hdrRow) {
+      var h = '<th style="text-align:left;padding:8px 12px;min-width:180px">KPI</th>';
+      agents.forEach(function(a){ h+='<th style="text-align:center;padding:8px 10px;white-space:nowrap">'+a+'</th>'; });
+      hdrRow.innerHTML = h;
+    }
+
+    // Agent filter key — matches format: year|month||
+    var agYr  = F.years.length  === 1 ? F.years[0]  : '';
+    var agMo  = F.months.length === 1 ? F.months[0] : '';
+    var agWE  = F.wes.length    === 1 ? F.wes[0]    : '';
+
+    function agentVal(tbl) {
+      if (!tbl) return null;
+      var v;
+      // Most specific key first
+      if (agWE)         v = tbl['||' + agWE + '|'];
+      if (v == null && agYr && agMo) v = tbl[agYr + '|' + agMo + '||'];
+      if (v == null && agYr)         v = tbl[agYr + '|||'];
+      if (v == null && agMo)         v = tbl['|' + agMo + '||'];
+      if (v == null)                 v = tbl['|||'];
+      return v != null ? v : null;
+    }
+
+    var leasRows = [
+      { lbl:'Listed to Leased',  sub:'Avg days col AK',
+        vals:function(a){ return agentVal(DATA.ltl_agent   ? DATA.ltl_agent[a]   : null); },
+        good:function(v){ return v<=14; }, fmt:function(v){ return v.toFixed(1)+'d'; } },
+      { lbl:'Phone Answer %',    sub:'Answered / Incoming',
+        vals:function(a){ return agentVal(DATA.phone_agent ? DATA.phone_agent[a] : null); },
+        good:function(v){ return v>=70; }, fmt:function(v){ return v.toFixed(1)+'%'; } },
+    ];
+
+    var lHtml = '';
+    leasRows.forEach(function(m, i) {
+      lHtml += '<tr style="background:'+rowBg(i)+'">';
+      lHtml += rowLabel(m.lbl, m.sub);
+      agents.forEach(function(a){ lHtml += cell(m.vals(a), m.good, m.fmt); });
+      lHtml += '</tr>';
+    });
+    leasBody.innerHTML = lHtml;
+  }
+}
+
 // ── TAB SWITCHING ─────────────────────────────────────
 function show(id, btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -1614,7 +1867,7 @@ function show(id, btn) {
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
   // Re-render charts now that the tab is visible
-  setTimeout(function(){ render(); renderStatic(); renderScorecard(); renderEOS(); }, 50);
+  setTimeout(function(){ render(); renderStatic(); renderScorecard(); renderEOS(); renderCEO(); }, 50);
 }
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
@@ -1696,6 +1949,7 @@ function applyF() {
   renderStatic();
   renderScorecard();
   renderEOS();
+  renderCEO();
 }
 
 function resetF() {
@@ -1723,6 +1977,7 @@ window.addEventListener('load', function() {
   renderStatic();
   renderScorecard();
   renderEOS();
+  renderCEO();
 });
 </script>
 
@@ -1741,6 +1996,57 @@ window.addEventListener('load', function() {
     </thead>
     <tbody id="eos-tbody"></tbody>
   </table>
+  </div>
+</div>
+
+<div class="page" id="ceo">
+  <p class="ptitle">CEO Scorecard</p>
+  <p class="psub" id="ceo-asof">High-level KPIs · as of latest data</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px">
+
+    <!-- PROPERTY MANAGEMENT SECTION -->
+    <div style="grid-column:1/-1">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--sky);
+                  text-transform:uppercase;border-bottom:2px solid var(--sky);
+                  padding-bottom:4px;margin-bottom:12px">Property Management</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="ceo-pm-table">
+        <thead>
+          <tr style="background:var(--navy);color:#fff">
+            <th style="text-align:left;padding:8px 12px;min-width:160px">KPI</th>
+            <th style="text-align:center;padding:8px 10px">North OC</th>
+            <th style="text-align:center;padding:8px 10px">South OC</th>
+            <th style="text-align:center;padding:8px 10px">SD Properties</th>
+            <th style="text-align:center;padding:8px 10px">Commercial</th>
+            <th style="text-align:center;padding:8px 10px">Brenden</th>
+            <th style="text-align:center;padding:8px 10px">Elderkin</th>
+            <th style="text-align:center;padding:8px 10px">STONE</th>
+          </tr>
+        </thead>
+        <tbody id="ceo-pm-body"></tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- LEASING SECTION -->
+    <div style="grid-column:1/-1;margin-top:16px">
+      <div style="font-size:11px;font-weight:700;letter-spacing:2px;color:var(--gold);
+                  text-transform:uppercase;border-bottom:2px solid var(--gold);
+                  padding-bottom:4px;margin-bottom:12px">Leasing</div>
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px" id="ceo-leasing-table">
+        <thead>
+          <tr style="background:var(--navy);color:#fff">
+            <th style="text-align:left;padding:8px 12px;min-width:180px">KPI</th>
+            <th id="ceo-agent-header" style="text-align:center;padding:8px 10px" colspan="6">Agents</th>
+          </tr>
+        </thead>
+        <tbody id="ceo-leasing-body"></tbody>
+      </table>
+      </div>
+    </div>
+
   </div>
 </div>
 </body>
