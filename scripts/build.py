@@ -501,7 +501,7 @@ for r in up_rows[1:]:
     up_flat.append({'n':str(r[4]).strip() if r[4] else '','pr':str(r[0]).strip() if r[0] else '',
         'u':str(r[3]).strip() if r[3] else '','a':round(amt,2),
         's':str(r[5]).strip() if r[5] else '','t':ter,'pt':prop,
-        'mo':month,'yr':year,'we':we.strftime('%Y-%m-%d')})
+        'mo':month,'yr':year,'we':r[16].strftime('%Y-%m-%d')})
     for k in agg_keys(year,month,ter,prop):
         up_totals[k]['total']+=amt; up_totals[k]['count']+=1
 up_flat.sort(key=lambda x:-x['a'])
