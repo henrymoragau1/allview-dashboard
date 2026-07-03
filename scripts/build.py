@@ -800,168 +800,185 @@ print(f"  scorecard rows: {len(scorecard_rows)}, eos rows: {len(eos_rows)}")
 
 # ── CEO SCORECARD DATA ────────────────────────────────────────────────────────
 print("[4d/7] Computing CEO scorecard data...")
+try:
 
-# Lost units by territory from property_directory-Term
-term_rows=read_sheet(FILES['term'])
-lost_ter=defaultdict(int)
-for r in term_rows[1:]:
-    if not r or not r[0]: continue
-    ter=(resolve(str(r[0]).strip()) or {}).get('territory','')
-    if ter and ter not in SKIP_TERS:
-        units=int(r[3]) if isinstance(r[3],(int,float)) else 1
-        lost_ter[ter]+=units
+  # Lost units by territory from property_directory-Term
+  term_rows=read_sheet(FILES['term'])
+  lost_ter=defaultdict(int)
+  for r in term_rows[1:]:
+      if not r or not r[0]: continue
+      ter=(resolve(str(r[0]).strip()) or {}).get('territory','')
+      if ter and ter not in SKIP_TERS:
+          units=int(r[3]) if isinstance(r[3],(int,float)) else 1
+          lost_ter[ter]+=units
 
-# Open WO by territory
-OPEN_ST={'Assigned','Estimate Requested','New','Scheduled','Waiting','Work Done'}
-wo_rows2=read_sheet(FILES['work_orders'])
-wo_open_ter=defaultdict(int)
-for r in wo_rows2[1:]:
-    if not r or not r[10]: continue
-    if str(r[10]).strip() not in OPEN_ST: continue
-    ter=(resolve(r[0]) if r[0] else {}).get('territory','')
-    if ter and ter not in SKIP_TERS: wo_open_ter[ter]+=1
+  # Open WO by territory
+  OPEN_ST={'Assigned','Estimate Requested','New','Scheduled','Waiting','Work Done'}
+  wo_rows2=read_sheet(FILES['work_orders'])
+  wo_open_ter=defaultdict(int)
+  for r in wo_rows2[1:]:
+      if not r or not r[10]: continue
+      if str(r[10]).strip() not in OPEN_ST: continue
+      ter=(resolve(r[0]) if r[0] else {}).get('territory','')
+      if ter and ter not in SKIP_TERS: wo_open_ter[ter]+=1
 
-# Phone answer % by territory and by leasing agent
-ANSWERED_SET={'Answered','Connected','Accepted','Call connected'}
-phone_rows2=read_sheet(FILES['phone'])
-phone_ter=defaultdict(lambda:{'total':0,'ans':0})
-staff_ter_map=defaultdict(set)
-# Build staff→territory mapping from portfolio
-for r in port_rows[1:]:
-    if not r: continue
-    ter=str(r[6]).strip() if r[6] else ''
-    if ter in SKIP_TERS: continue
-    for col in [7,8,9,10]:
-        if r[col] and str(r[col]).strip() not in ('TBD','','Commercial','STONE PM'):
-            staff_ter_map[str(r[col]).strip()].add(ter)
+  # Phone answer % by territory and by leasing agent
+  ANSWERED_SET={'Answered','Connected','Accepted','Call connected'}
+  phone_rows2=read_sheet(FILES['phone'])
+  phone_ter=defaultdict(lambda:{'total':0,'ans':0})
+  staff_ter_map=defaultdict(set)
+  # Build staff→territory mapping from portfolio
+  for r in port_rows[1:]:
+      if not r: continue
+      ter=str(r[6]).strip() if r[6] else ''
+      if ter in SKIP_TERS: continue
+      for col in [7,8,9,10]:
+          if r[col] and str(r[col]).strip() not in ('TBD','','Commercial','STONE PM'):
+              staff_ter_map[str(r[col]).strip()].add(ter)
 
-for r in phone_rows2[1:]:
-    if not r or str(r[1]).strip()!='Incoming': continue
-    name=str(r[16]).strip() if r[16] else ''
-    result=str(r[10]).strip() if r[10] else ''
-    is_ans=result in ANSWERED_SET
-    for ter in staff_ter_map.get(name,set()):
-        phone_ter[ter]['total']+=1
-        if is_ans: phone_ter[ter]['ans']+=1
+  for r in phone_rows2[1:]:
+      if not r or str(r[1]).strip()!='Incoming': continue
+      name=str(r[16]).strip() if r[16] else ''
+      result=str(r[10]).strip() if r[10] else ''
+      is_ans=result in ANSWERED_SET
+      for ter in staff_ter_map.get(name,set()):
+          phone_ter[ter]['total']+=1
+          if is_ans: phone_ter[ter]['ans']+=1
 
-phone_pct_ter={ter:round(v['ans']/v['total']*100,1) if v['total'] else None
-                for ter,v in phone_ter.items()}
+  phone_pct_ter={ter:round(v['ans']/v['total']*100,1) if v['total'] else None
+                  for ter,v in phone_ter.items()}
 
-TERS_CEO=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
-D2['ceo']={
-    'latest_we':  D2.get('latest_we',''),
-    'ters':       TERS_CEO,
-    'phone_ter':  {t:phone_pct_ter.get(t) for t in TERS_CEO},
-    'wo_open':    {t:wo_open_ter.get(t,0) for t in TERS_CEO},
-    'lost_units': {t:lost_ter.get(t,0) for t in TERS_CEO},
-    'concessions':{t:round(DATA.get('concessions_agg',{}).get(f'||{t}|',0),0) for t in TERS_CEO},
-    'ltl_agent':  DATA.get('ltl_agent',{}),
-    'phone_agent':DATA.get('phone_agent',{}),
-}
-print(f"  CEO data built: phone_ter={phone_pct_ter}")
+  TERS_CEO=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
+  D2['ceo']={
+      'latest_we':  D2.get('latest_we',''),
+      'ters':       TERS_CEO,
+      'phone_ter':  {t:phone_pct_ter.get(t) for t in TERS_CEO},
+      'wo_open':    {t:wo_open_ter.get(t,0) for t in TERS_CEO},
+      'lost_units': {t:lost_ter.get(t,0) for t in TERS_CEO},
+      'concessions':{t:round(DATA.get('concessions_agg',{}).get(f'||{t}|',0),0) for t in TERS_CEO},
+      'ltl_agent':  DATA.get('ltl_agent',{}),
+      'phone_agent':DATA.get('phone_agent',{}),
+  }
+
+  print(f"  CEO data built: phone_ter={phone_pct_ter}")
+except Exception as e:
+  print(f"  WARNING [4d/7]: {e}")
+  D2.setdefault('ceo',{})
 
 
 # ── CALLS LEADERBOARD & TREND ─────────────────────────────────────────────────
 print("[4e/7] Computing calls, churn, WO completion, reviews...")
-ANSWERED_CALLS={'Answered','Connected','Accepted','Call connected'}
-phone_rows3=read_sheet(FILES['phone'])
-calls_by_person=defaultdict(lambda:{'total':0,'ans':0,'role':''})
-calls_by_month3=defaultdict(lambda:defaultdict(lambda:{'total':0,'ans':0}))
-for r in phone_rows3[1:]:
-    if not r or str(r[1]).strip()!='Incoming': continue
-    name=str(r[16]).strip() if r[16] else ''
-    role=str(r[17]).strip() if r[17] else ''
-    result=str(r[10]).strip() if r[10] else ''
-    yr=str(r[23]).strip() if r[23] else ''
-    mo=str(r[22]).strip() if r[22] else ''
-    if not name: continue
-    is_ans=result in ANSWERED_CALLS
-    calls_by_person[name]['total']+=1
-    calls_by_person[name]['role']=role
-    if is_ans: calls_by_person[name]['ans']+=1
-    if yr and mo:
-        calls_by_month3[f"{yr}|{mo}"][name]['total']+=1
-        if is_ans: calls_by_month3[f"{yr}|{mo}"][name]['ans']+=1
+# Wrap in try/except so any error here doesn't break the full build
+try:
+  ANSWERED_CALLS={'Answered','Connected','Accepted','Call connected'}
+  phone_rows3=read_sheet(FILES['phone'])
+  calls_by_person=defaultdict(lambda:{'total':0,'ans':0,'role':''})
+  calls_by_month3=defaultdict(lambda:defaultdict(lambda:{'total':0,'ans':0}))
+  for r in phone_rows3[1:]:
+      if not r or str(r[1]).strip()!='Incoming': continue
+      name=str(r[16]).strip() if r[16] else ''
+      role=str(r[17]).strip() if r[17] else ''
+      result=str(r[10]).strip() if r[10] else ''
+      yr=str(r[23]).strip() if r[23] else ''
+      mo=str(r[22]).strip() if r[22] else ''
+      if not name: continue
+      is_ans=result in ANSWERED_CALLS
+      calls_by_person[name]['total']+=1
+      calls_by_person[name]['role']=role
+      if is_ans: calls_by_person[name]['ans']+=1
+      if yr and mo:
+          calls_by_month3[f"{yr}|{mo}"][name]['total']+=1
+          if is_ans: calls_by_month3[f"{yr}|{mo}"][name]['ans']+=1
 
-calls_lb=[]
-for name,v in calls_by_person.items():
-    if v['total']>=50:
-        calls_lb.append({'name':name,'role':v['role'],'total':v['total'],
-            'ans':v['ans'],'pct':round(v['ans']/v['total']*100,1)})
-calls_lb.sort(key=lambda x:-x['pct'])
-D2['calls_lb']=calls_lb
+  calls_lb=[]
+  for name,v in calls_by_person.items():
+      if v['total']>=50:
+          calls_lb.append({'name':name,'role':v['role'],'total':v['total'],
+              'ans':v['ans'],'pct':round(v['ans']/v['total']*100,1)})
+  calls_lb.sort(key=lambda x:-x['pct'])
+  D2['calls_lb']=calls_lb
 
-calls_trend={}
-ROLES_TRACK={'Property Management','Leasing'}
-for mo_key,people in sorted(calls_by_month3.items()):
-    pm_tot=sum(v['total'] for n,v in people.items() if calls_by_person[n]['role']=='Property Management')
-    pm_ans=sum(v['ans']   for n,v in people.items() if calls_by_person[n]['role']=='Property Management')
-    ls_tot=sum(v['total'] for n,v in people.items() if calls_by_person[n]['role']=='Leasing')
-    ls_ans=sum(v['ans']   for n,v in people.items() if calls_by_person[n]['role']=='Leasing')
-    calls_trend[mo_key]={'pm_total':pm_tot,'pm_ans':pm_ans,'ls_total':ls_tot,'ls_ans':ls_ans}
-D2['calls_trend']=calls_trend
+  calls_trend={}
+  ROLES_TRACK={'Property Management','Leasing'}
+  for mo_key,people in sorted(calls_by_month3.items()):
+      pm_tot=sum(v['total'] for n,v in people.items() if calls_by_person[n]['role']=='Property Management')
+      pm_ans=sum(v['ans']   for n,v in people.items() if calls_by_person[n]['role']=='Property Management')
+      ls_tot=sum(v['total'] for n,v in people.items() if calls_by_person[n]['role']=='Leasing')
+      ls_ans=sum(v['ans']   for n,v in people.items() if calls_by_person[n]['role']=='Leasing')
+      calls_trend[mo_key]={'pm_total':pm_tot,'pm_ans':pm_ans,'ls_total':ls_tot,'ls_ans':ls_ans}
+  D2['calls_trend']=calls_trend
 
-# ── WO COMPLETION TIME ────────────────────────────────────────────────────────
-wo_rows3=read_sheet(FILES['work_orders'])
-wo_comp_ter=defaultdict(lambda:{'sum':0,'cnt':0})
-wo_comp_mo=defaultdict(lambda:{'sum':0,'cnt':0})
-for r in wo_rows3[1:]:
-    if not r or not r[14] or not r[24]: continue
-    if not hasattr(r[14],'strftime') or not hasattr(r[24],'strftime'): continue
-    days=(r[24]-r[14]).days
-    if days<0 or days>365: continue
-    ter=str(r[40]).strip() if r[40] else (resolve(str(r[0]).strip()) or {}).get('territory','')
-    if ter and ter not in SKIP_TERS:
-        wo_comp_ter[ter]['sum']+=days; wo_comp_ter[ter]['cnt']+=1
-    yr=str(r[42]).strip() if r[42] else ''
-    mo=str(r[43]).strip() if r[43] else ''
-    if yr and mo:
-        wo_comp_mo[f"{yr}|{mo}"]['sum']+=days; wo_comp_mo[f"{yr}|{mo}"]['cnt']+=1
-D2['wo_completion']={
-    'by_ter':{t:round(v['sum']/v['cnt'],1) for t,v in wo_comp_ter.items() if v['cnt']>0},
-    'by_month':{k:round(v['sum']/v['cnt'],1) for k,v in wo_comp_mo.items() if v['cnt']>0}
-}
+  # ── WO COMPLETION TIME ────────────────────────────────────────────────────────
+  wo_rows3=read_sheet(FILES['work_orders'])
+  wo_comp_ter=defaultdict(lambda:{'sum':0,'cnt':0})
+  wo_comp_mo=defaultdict(lambda:{'sum':0,'cnt':0})
+  for r in wo_rows3[1:]:
+      if not r or not r[14] or not r[24]: continue
+      if not hasattr(r[14],'strftime') or not hasattr(r[24],'strftime'): continue
+      days=(r[24]-r[14]).days
+      if days<0 or days>365: continue
+      ter=str(r[40]).strip() if r[40] else (resolve(str(r[0]).strip()) or {}).get('territory','')
+      if ter and ter not in SKIP_TERS:
+          wo_comp_ter[ter]['sum']+=days; wo_comp_ter[ter]['cnt']+=1
+      yr=str(r[42]).strip() if r[42] else ''
+      mo=str(r[43]).strip() if r[43] else ''
+      if yr and mo:
+          wo_comp_mo[f"{yr}|{mo}"]['sum']+=days; wo_comp_mo[f"{yr}|{mo}"]['cnt']+=1
+  D2['wo_completion']={
+      'by_ter':{t:round(v['sum']/v['cnt'],1) for t,v in wo_comp_ter.items() if v['cnt']>0},
+      'by_month':{k:round(v['sum']/v['cnt'],1) for k,v in wo_comp_mo.items() if v['cnt']>0}
+  }
 
-# ── REVIEWS DETAIL ────────────────────────────────────────────────────────────
-fs_rows=read_sheet(FILES['five_star'])
-reviews_detail=[]
-PLATFORMS=['YELP OC','GOOGLE OC','Google SD','YELP SD']
-for r in fs_rows[1:]:
-    if not r or not r[0]: continue
-    entry={'name':str(r[0]).strip(),'total':r[1] if isinstance(r[1],(int,float)) else 0,
-           'points':r[6] if len(r)>6 and isinstance(r[6],(int,float)) else 0}
-    for i,p in enumerate(PLATFORMS,2):
-        entry[p]=r[i] if i<len(r) and isinstance(r[i],(int,float)) else 0
-    reviews_detail.append(entry)
-D2['reviews_detail']=reviews_detail
+  # ── REVIEWS DETAIL ────────────────────────────────────────────────────────────
+  fs_rows=read_sheet(FILES['five_star'])
+  reviews_detail=[]
+  PLATFORMS=['YELP OC','GOOGLE OC','Google SD','YELP SD']
+  for r in fs_rows[1:]:
+      if not r or not r[0]: continue
+      entry={'name':str(r[0]).strip(),'total':r[1] if isinstance(r[1],(int,float)) else 0,
+             'points':r[6] if len(r)>6 and isinstance(r[6],(int,float)) else 0}
+      for i,p in enumerate(PLATFORMS,2):
+          entry[p]=r[i] if i<len(r) and isinstance(r[i],(int,float)) else 0
+      reviews_detail.append(entry)
+  D2['reviews_detail']=reviews_detail
 
-# ── CHURN DATA ────────────────────────────────────────────────────────────────
-term_rows2=read_sheet(FILES['term'])
-churn_rows=[]
-for r in term_rows2[1:]:
-    if not r or not r[0]: continue
-    addr=str(r[0]).strip()
-    attrs=resolve(addr) or {}
-    churn_rows.append({
-        'address':addr,
-        'units':int(r[3]) if isinstance(r[3],(int,float)) else 1,
-        'reason':str(r[6]).strip() if r[6] else 'Unknown',
-        'end_date':r[5].strftime('%Y-%m-%d') if r[5] and hasattr(r[5],'strftime') else '',
-        'year':str(r[7]).strip() if r[7] else '',
-        'month':str(r[8]).strip() if r[8] else '',
-        'territory':attrs.get('territory',''),
-        'pm':attrs.get('pm','')
-    })
-D2['churn']=churn_rows
+  # ── CHURN DATA ────────────────────────────────────────────────────────────────
+  term_rows2=read_sheet(FILES['term'])
+  churn_rows=[]
+  for r in term_rows2[1:]:
+      if not r or not r[0]: continue
+      addr=str(r[0]).strip()
+      attrs=resolve(addr) or {}
+      churn_rows.append({
+          'address':addr,
+          'units':int(r[3]) if isinstance(r[3],(int,float)) else 1,
+          'reason':str(r[6]).strip() if r[6] else 'Unknown',
+          'end_date':r[5].strftime('%Y-%m-%d') if r[5] and hasattr(r[5],'strftime') else '',
+          'year':str(r[7]).strip() if r[7] else '',
+          'month':str(r[8]).strip() if r[8] else '',
+          'territory':attrs.get('territory',''),
+          'pm':attrs.get('pm','')
+      })
+  D2['churn']=churn_rows
 
-# ── PORTFOLIO COUNT BY TERRITORY (current snapshot for churn %) ───────────────
-# Use latest WE from port_counts
-we_port_keys=sorted([k for k in D2['port_counts'] if k.startswith('we:')])
-latest_port_we=we_port_keys[-1] if we_port_keys else None
-D2['port_by_ter_current']=D2['port_counts'].get(latest_port_we,{}) if latest_port_we else {}
-D2['port_latest_we']=latest_port_we.replace('we:','') if latest_port_we else ''
+  # ── PORTFOLIO COUNT BY TERRITORY (current snapshot for churn %) ───────────────
+  # Use latest WE from port_counts
+  we_port_keys=sorted([k for k in D2['port_counts'] if k.startswith('we:')])
+  latest_port_we=we_port_keys[-1] if we_port_keys else None
+  D2['port_by_ter_current']=D2['port_counts'].get(latest_port_we,{}) if latest_port_we else {}
+  D2['port_latest_we']=latest_port_we.replace('we:','') if latest_port_we else ''
 
-print(f"  calls_lb:{len(calls_lb)} wo_comp:{len(wo_comp_ter)} churn:{len(churn_rows)} reviews:{len(reviews_detail)}")
+
+  print(f"  calls_lb:{len(calls_lb)} wo_comp:{len(wo_comp_ter)} churn:{len(churn_rows)} reviews:{len(reviews_detail)}")
+except Exception as e:
+  print(f"  WARNING [4e/7]: {e} — setting empty defaults")
+  D2.setdefault('calls_lb',[])
+  D2.setdefault('calls_trend',{})
+  D2.setdefault('wo_completion',{'by_ter':{},'by_month':{}})
+  D2.setdefault('reviews_detail',[])
+  D2.setdefault('churn',[])
+  D2.setdefault('port_by_ter_current',{})
+  D2.setdefault('port_latest_we','')
 
 print("[5/7] Reading HTML template...")
 if not os.path.exists(TEMPLATE_PATH):
