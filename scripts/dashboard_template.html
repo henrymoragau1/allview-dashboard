@@ -145,6 +145,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 .calls-role-btn{font-size:11px;padding:4px 12px;border:1px solid var(--border);
   border-radius:20px;cursor:pointer;background:#fff;color:var(--text);}
 .calls-role-btn.act{background:var(--sky);color:#fff;border-color:var(--sky);}
+.card canvas { max-height: 220px !important; }
+.card .cw canvas { max-height: 260px !important; }
+.card .cw.tall canvas { max-height: 320px !important; }
+.card .cw.sh canvas { max-height: 220px !important; }
 </style>
 </head>
 <body>
@@ -665,7 +669,7 @@ function mkChart(id, type, labels, datasets, opts) {
   Chart.defaults.plugins.legend.display = false;
   CHARTS[id] = new Chart(el.getContext('2d'), {
     type, data: {labels, datasets},
-    options: Object.assign({responsive:true,maintainAspectRatio:true}, opts||{})
+    options: Object.assign({responsive:true,maintainAspectRatio:false}, opts||{})
   });
 }
 
@@ -1570,20 +1574,67 @@ function renderEOS() {
   var tbody = document.getElementById('eos-tbody');
   if (!tbody) return;
 
-  var F    = getFilters();
-  var rows = (D2.eos || []).slice();
+  var F = getFilters();
+  var MO_MAP = {January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
+                July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
+  var rows;
 
-  if (F.years.length) {
-    rows = rows.filter(function(r){ return F.years.indexOf(r.we.slice(0,4)) >= 0; });
+  // When territory or proptype filter is active, derive EOS from scorecard data
+  if (F.ters.length || F.pts.length) {
+    // Filter scorecard rows by territory/proptype/year/month/we
+    var sc = (D2.scorecard || []).filter(function(r) {
+      if (F.ters.length && F.ters.indexOf(r.territory) < 0) return false;
+      if (F.pts.length  && F.pts.indexOf(r.proptype)   < 0) return false;
+      if (F.years.length  && F.years.indexOf(r.we.slice(0,4)) < 0) return false;
+      if (F.months.length && (function(){ var moNums=F.months.map(function(m){return MO_MAP[m];}); return moNums.indexOf(r.we.slice(5,7))<0; })()) return false;
+      if (F.wes.length    && F.wes.indexOf(r.we) < 0) return false;
+      return true;
+    });
+    // Aggregate per WE: weighted avg of NPS, LR%, UT, AR%, vac_rate
+    var byWE = {};
+    sc.forEach(function(r) {
+      if (!byWE[r.we]) byWE[r.we] = [];
+      byWE[r.we].push(r);
+    });
+    rows = Object.keys(byWE).sort().map(function(we) {
+      var grp = byWE[we];
+      var uc  = grp.reduce(function(s,r){return s+(r.unit_count||0);},0);
+      var vc  = grp.reduce(function(s,r){return s+(r.vacant||0);},0);
+      function wavg(key) {
+        var valid = grp.filter(function(r){return r[key]!=null;});
+        if (!valid.length) return null;
+        var sum  = valid.reduce(function(s,r){return s+r[key]*(r.unit_count||1);},0);
+        var base = valid.reduce(function(s,r){return s+(r.unit_count||1);},0);
+        return base>0 ? Math.round(sum/base*100)/100 : null;
+      }
+      return {
+        we: we,
+        label: we.slice(5,7)+'/'+we.slice(8,10)+'/'+we.slice(2,4),
+        nps:       wavg('nps'),
+        lr_pct:    wavg('lr_pct'),
+        unit_turn: wavg('unit_turn'),
+        ar_pct:    wavg('ar_pct'),
+        vac_rate:  uc>0 ? Math.round(vc/uc*10000)/100 : null,
+        show_conv: null,  // not available per territory
+        vac_loss:  null   // not available per territory
+      };
+    });
+  } else {
+    rows = (D2.eos || []).slice();
   }
-  if (F.months.length) {
-    var MO_MAP = {January:'01',February:'02',March:'03',April:'04',May:'05',June:'06',
-                  July:'07',August:'08',September:'09',October:'10',November:'11',December:'12'};
-    var moNums = F.months.map(function(m){ return MO_MAP[m]; });
-    rows = rows.filter(function(r){ return moNums.indexOf(r.we.slice(5,7)) >= 0; });
-  }
-  if (F.wes.length) {
-    rows = rows.filter(function(r){ return F.wes.indexOf(r.we) >= 0; });
+
+  // Standard year/month/we filters (when no ter/pt filter)
+  if (!F.ters.length && !F.pts.length) {
+    if (F.years.length) {
+      rows = rows.filter(function(r){ return F.years.indexOf(r.we.slice(0,4)) >= 0; });
+    }
+    if (F.months.length) {
+      var moNums2 = F.months.map(function(m){ return MO_MAP[m]; });
+      rows = rows.filter(function(r){ return moNums2.indexOf(r.we.slice(5,7)) >= 0; });
+    }
+    if (F.wes.length) {
+      rows = rows.filter(function(r){ return F.wes.indexOf(r.we) >= 0; });
+    }
   }
 
   if (!rows.length) {
@@ -1933,9 +1984,12 @@ function renderCalls() {
   var activeRole = document.querySelector('.calls-role-btn.act');
   var roleFilter = activeRole ? activeRole.dataset.role : 'all';
 
-  var rows = D2.calls_lb.filter(function(p) {
+  var rows = (D2.calls_lb||[]).filter(function(p) {
     return roleFilter==='all' || p.role===roleFilter;
   });
+  // Note: calls_lb is all-time aggregate; filter label shown in subtitle
+  var filterNote = '';
+  if (F.years.length||F.months.length) filterNote=' (all-time totals shown — call data not broken down by period)';
 
   var html = '';
   rows.forEach(function(p, i) {
@@ -1974,8 +2028,11 @@ function renderCalls() {
 function renderWOCompletion() {
   var el = document.getElementById('c-wo-completion');
   if (!el || !D2.wo_completion) return;
+  var F = getFilters();
   var byTer = D2.wo_completion.by_ter || {};
-  var labels = Object.keys(byTer).sort();
+  var labels = Object.keys(byTer).sort().filter(function(t){
+    return !F.ters.length || F.ters.indexOf(t) >= 0;
+  });
   var vals   = labels.map(function(t){return byTer[t];});
   var colors = labels.map(function(t){return TER_COLORS[t]||'#aaa';});
   mkChart('c-wo-completion','bar',labels,
@@ -1995,6 +2052,8 @@ function renderChurn() {
   if (F.years.length)  rows=rows.filter(function(r){return F.years.indexOf(r.year)>=0;});
   if (F.months.length) rows=rows.filter(function(r){return F.months.indexOf(r.month)>=0;});
   if (F.ters.length)   rows=rows.filter(function(r){return F.ters.indexOf(r.territory)>=0;});
+  // WE filter on churn: filter by end_date matching the WE date
+  if (F.wes.length)    rows=rows.filter(function(r){return F.wes.indexOf(r.end_date)>=0;});
 
   // KPIs
   var totalProps = rows.length;
@@ -2439,10 +2498,10 @@ window.addEventListener('load', function() {
     <div class="kpi cor"><div class="klbl">Total Lost Units</div><div class="kval" id="churn-units">—</div><div class="ksub">Including multi-unit</div></div>
     <div class="kpi"><div class="klbl">Most Common Reason</div><div class="kval" id="churn-top-reason" style="font-size:16px">—</div><div class="ksub" id="churn-top-pct">—</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
-    <div class="card"><p class="ctitle">Loss Reasons</p><canvas id="c-churn-reason" height="220"></canvas></div>
-    <div class="card"><p class="ctitle">Churn % by Territory</p><p class="csub">Lost units ÷ (lost + current)</p><canvas id="c-churn-ter" height="220"></canvas></div>
-    <div class="card" style="grid-column:1/-1"><p class="ctitle">Churn Over Time</p><p class="csub">Properties lost per month</p><canvas id="c-churn-trend" height="180"></canvas></div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card"><p class="ctitle">Loss Reasons</p><div style="max-height:220px"><canvas id="c-churn-reason" height="160"></canvas></div></div>
+    <div class="card"><p class="ctitle">Churn % by Territory</p><p class="csub">Lost units ÷ (lost + current)</p><div style="max-height:220px"><canvas id="c-churn-ter" height="160"></canvas></div></div>
+    <div class="card"><p class="ctitle">Churn Over Time</p><p class="csub">Lost per month</p><div style="max-height:220px"><canvas id="c-churn-trend" height="160"></canvas></div></div>
   </div>
   <div class="card">
     <p class="ctitle">Lost Properties Detail</p>
