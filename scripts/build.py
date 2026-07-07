@@ -774,6 +774,39 @@ for we in all_sc_we:
     })
 D2['scorecard']=scorecard_rows
 
+# Build per-territory scorecard rows (for EOS territory filter)
+TERS_SC=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
+for ter in TERS_SC:
+    last_nps_ter=None
+    for we in all_sc_we:
+        # Vacancy/portfolio from vac_donut2/port_counts we: keys
+        we_key='we:'+we
+        unit_count=(D2['port_counts'].get(we_key) or {}).get(ter,0)
+        vacant    =(D2['vac_donut2'].get(we_key)  or {}).get(ter,0)
+        vac_pct   =round(vacant/unit_count*100,2) if unit_count else 0
+        # NPS: latest cumulative for this territory up to this WE
+        ter_nps = DATA.get('nps_cum_ter',{}).get(ter,{})
+        nps_wes_before = [w for w in ter_nps if w<=we]
+        if nps_wes_before: last_nps_ter=ter_nps[max(nps_wes_before)]
+        # LR%: use territory-level key from DATA.lr_r/lr_m
+        lr_key_ter = '|||'  # fallback; territory-level LR not in current data
+        # AR%: use territory+month EOM
+        we_dt=datetime.datetime.strptime(we,'%Y-%m-%d')
+        mo_name={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+                 7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}[we_dt.month]
+        yr_str=str(we_dt.year)
+        ar_ter=DATA.get('ar_pct',{}).get(f'{yr_str}|{mo_name}|{ter}|')
+        scorecard_rows.append({
+            'we':we,'territory':ter,'proptype':'',
+            'unit_count':unit_count,'vacant':vacant,'vac_pct':vac_pct,
+            'nps':last_nps_ter,
+            'opened_wo':0,'rent_unit':None,
+            'lr_pct':lr_pct_we.get(we),  # all-territory LR (best available)
+            'unit_turn':ut_cum.get(we),   # all-territory UT (best available)
+            'ar_pct':ar_ter,'concessions':0,
+        })
+D2['scorecard']=scorecard_rows  # update with per-territory rows added
+
 # Build EOS rows
 from datetime import timedelta as td
 eos_rows=[]
