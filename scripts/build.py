@@ -944,22 +944,35 @@ try:
 
   # ── CHURN DATA ────────────────────────────────────────────────────────────────
   term_rows2=read_sheet(FILES['term'])
+  # Print headers to diagnose column layout on live data
+  if len(term_rows2)>0:
+      print(f"  Term file headers: {[str(h)[:15] for h in term_rows2[0]]}")
   churn_rows=[]
   for r in term_rows2[1:]:
       if not r or not r[0]: continue
       addr=str(r[0]).strip()
       attrs=resolve(addr) or {}
+      # Safely get columns with fallbacks
+      def safe_col(row, idx, default=''):
+          try: return row[idx] if idx < len(row) else default
+          except: return default
+      units_val = safe_col(r, 3)
+      end_val   = safe_col(r, 5)
+      reason_val= safe_col(r, 6)
+      yr_val    = safe_col(r, 7)
+      mo_val    = safe_col(r, 8)
       churn_rows.append({
           'address':addr,
-          'units':int(r[3]) if isinstance(r[3],(int,float)) else 1,
-          'reason':str(r[6]).strip() if r[6] else 'Unknown',
-          'end_date':r[5].strftime('%Y-%m-%d') if r[5] and hasattr(r[5],'strftime') else '',
-          'year':str(r[7]).strip() if r[7] else '',
-          'month':str(r[8]).strip() if r[8] else '',
+          'units':int(units_val) if isinstance(units_val,(int,float)) else 1,
+          'reason':str(reason_val).strip() if reason_val else 'Unknown',
+          'end_date':end_val.strftime('%Y-%m-%d') if end_val and hasattr(end_val,'strftime') else '',
+          'year':str(yr_val).strip() if yr_val else '',
+          'month':str(mo_val).strip() if mo_val else '',
           'territory':attrs.get('territory',''),
           'pm':attrs.get('pm','')
       })
   D2['churn']=churn_rows
+  print(f"  Churn rows loaded: {len(churn_rows)}")
 
   # ── PORTFOLIO COUNT BY TERRITORY (current snapshot for churn %) ───────────────
   # Use latest WE from port_counts
