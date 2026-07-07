@@ -975,11 +975,17 @@ try:
   print(f"  Churn rows loaded: {len(churn_rows)}")
 
   # ── PORTFOLIO COUNT BY TERRITORY (current snapshot for churn %) ───────────────
-  # Use latest WE from port_counts
+  # Use latest WE with full territory data (skip partial snapshots with <3 territories)
   we_port_keys=sorted([k for k in D2['port_counts'] if k.startswith('we:')])
-  latest_port_we=we_port_keys[-1] if we_port_keys else None
+  latest_port_we=None
+  for k in reversed(we_port_keys):
+      if len(D2['port_counts'].get(k,{})) >= 3:
+          latest_port_we=k; break
+  if not latest_port_we and we_port_keys:
+      latest_port_we=we_port_keys[-1]
   D2['port_by_ter_current']=D2['port_counts'].get(latest_port_we,{}) if latest_port_we else {}
   D2['port_latest_we']=latest_port_we.replace('we:','') if latest_port_we else ''
+  print(f"  Portfolio snapshot: {latest_port_we} → {D2['port_by_ter_current']}")
 
 
   print(f"  calls_lb:{len(calls_lb)} wo_comp:{len(wo_comp_ter)} churn:{len(churn_rows)} reviews:{len(reviews_detail)}")
