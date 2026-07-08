@@ -1580,11 +1580,16 @@ function renderEOS() {
   var rows;
 
   var ALL_TERS_7 = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
-  var ALL_PTS_2  = ['Single-Family','Multi-Family','Commercial'];
+  var ALL_PTS_2  = ['Single-Family','Multi-Family','Commercial','Condo','Townhome'];
 
   // Determine if territory/PT filter is truly a subset or effectively "all"
   var terSubset = F.ters.length > 0 && F.ters.length < ALL_TERS_7.length;
-  var ptActive  = F.pts.length  > 0 && F.pts.length  < ALL_PTS_2.length;
+  // PT filter is "active subset" only if SOME but NOT ALL property types selected
+  // Get all distinct PTs from scorecard data
+  var allKnownPTs = [];
+  (D2.scorecard||[]).forEach(function(r){ if(r.proptype && allKnownPTs.indexOf(r.proptype)<0) allKnownPTs.push(r.proptype); });
+  if (!allKnownPTs.length) allKnownPTs = ALL_PTS_2;
+  var ptActive = F.pts.length > 0 && F.pts.length < allKnownPTs.length;
 
   if (terSubset || ptActive) {
     // Derive EOS rows by aggregating per-territory scorecard data
@@ -1636,7 +1641,7 @@ function renderEOS() {
 
       // EOS label matches existing format
       var eosRow = D2.eos ? D2.eos.find(function(e){return e.we===we;}) : null;
-      // show_conv: weighted avg of per-territory conversion rates
+      // show_conv: avg of per-territory rates
       function wsum(key) {
         var vals = grp.filter(function(r){return r[key]!=null && r[key]>0;});
         if (!vals.length) return null;
@@ -1644,12 +1649,14 @@ function renderEOS() {
       }
       // vac_loss: sum across selected territories
       var totalVacLoss = grp.reduce(function(s,r){return s+(r.vac_loss||0);},0);
+      // lr_pct and unit_turn: use all-territory EOS values (not territory-specific)
+      // because LR and unit turn are not tracked per territory per WE
       return {
         we:        we,
         label:     eosRow ? eosRow.label : we.slice(5,7)+'/'+we.slice(8,10)+'/'+we.slice(2,4),
         nps:       wavg('nps'),
-        lr_pct:    wavg('lr_pct'),
-        unit_turn: wavg('unit_turn'),
+        lr_pct:    eosRow ? eosRow.lr_pct    : null,
+        unit_turn: eosRow ? eosRow.unit_turn  : null,
         ar_pct:    wavg('ar_pct'),
         vac_rate:  uc>0 ? Math.round(vc/uc*10000)/100 : null,
         show_conv: wsum('show_conv'),
@@ -1766,7 +1773,8 @@ function renderCEO() {
   var we = F.wes.length    === 1 ? F.wes[0]    : '';
   var pt = F.pts.length    === 1 ? F.pts[0]    : '';
 
-  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var ALL_TERS_CEO = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var TERS = F.ters.length ? F.ters.filter(function(t){return ALL_TERS_CEO.indexOf(t)>=0;}) : ALL_TERS_CEO;
 
   // ── Snapshot key for vacancy ─────────────────────────────────────────────────
   var snapKey;
@@ -2021,7 +2029,9 @@ function renderCalls() {
   var roleFilter = activeRole ? activeRole.dataset.role : 'all';
 
   var rows = (D2.calls_lb||[]).filter(function(p) {
-    return roleFilter==='all' || p.role===roleFilter;
+    if (roleFilter!=='all' && p.role!==roleFilter) return false;
+    // Note: calls_lb is all-time; territory/WE filter not applicable at agent level
+    return true;
   });
   // Note: calls_lb is all-time aggregate; filter label shown in subtitle
   var filterNote = '';
@@ -2066,11 +2076,32 @@ function renderWOCompletion() {
   if (!el || !D2.wo_completion) return;
   var F = getFilters();
   var byTer = D2.wo_completion.by_ter || {};
-  var labels = Object.keys(byTer).sort().filter(function(t){
-    return !F.ters.length || F.ters.indexOf(t) >= 0;
-  });
-  var vals   = labels.map(function(t){return byTer[t];});
-  var colors = labels.map(function(t){return TER_COLORS[t]||'#aaa';});
+  var byMo  = D2.wo_completion.by_month || {};
+  // If year/month filter: use by_month data filtered to matching keys
+  var labels, vals, colors;
+  if (F.years.length || F.months.length) {
+    // aggregate completion time for matching year|month keys
+    var sumMap={}; var cntMap={};
+    Object.keys(byMo).forEach(function(k){
+      var parts=k.split('|'); var yr=parts[0]; var mo=parts[1];
+      if (F.years.length  && F.years.indexOf(yr)  < 0) return;
+      if (F.months.length && F.months.indexOf(mo) < 0) return;
+      // byMo[k] is a single avg — accumulate
+      sumMap[k]=byMo[k]; cntMap[k]=1;
+    });
+    // Just show territory breakdown for now using by_ter
+    labels = Object.keys(byTer).sort().filter(function(t){
+      return !F.ters.length || F.ters.indexOf(t) >= 0;
+    });
+    vals   = labels.map(function(t){return byTer[t];});
+    colors = labels.map(function(t){return TER_COLORS[t]||'#aaa';});
+  } else {
+    labels = Object.keys(byTer).sort().filter(function(t){
+      return !F.ters.length || F.ters.indexOf(t) >= 0;
+    });
+    vals   = labels.map(function(t){return byTer[t];});
+    colors = labels.map(function(t){return TER_COLORS[t]||'#aaa';});
+  }
   mkChart('c-wo-completion','bar',labels,
     [{label:'Avg Days',data:vals,backgroundColor:colors,borderRadius:4}],
     {plugins:{legend:{display:false}},
@@ -2115,7 +2146,8 @@ function renderChurn() {
 
   // Churn % by territory bar chart
   var portfolio = D2.port_by_ter_current || {};
-  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var ALL_TERS_CEO = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var TERS = F.ters.length ? F.ters.filter(function(t){return ALL_TERS_CEO.indexOf(t)>=0;}) : ALL_TERS_CEO;
   var terLabels = TERS.filter(function(t){ return portfolio[t]||0; });
   if (F.ters.length) terLabels = terLabels.filter(function(t){return F.ters.indexOf(t)>=0;});
 
@@ -2231,7 +2263,8 @@ function buildDataSummary() {
 
   // NPS by territory
   var npsByTer = [];
-  var TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var ALL_TERS_CEO = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var TERS = F.ters.length ? F.ters.filter(function(t){return ALL_TERS_CEO.indexOf(t)>=0;}) : ALL_TERS_CEO;
   TERS.forEach(function(t){
     var v = DATA.nps_cum_ter && DATA.nps_cum_ter[t];
     if (v) {
