@@ -697,7 +697,15 @@ for r in rr_rows2[1:]:
     if not we: continue
     rent=r[9] if isinstance(r[9],(int,float)) and r[9] and r[9]>0 else 0
     rr_by_we2[we.strftime('%Y-%m-%d')]+=rent
-ar_pct_we2={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if rr_by_we2.get(we,0)>0}
+ar_pct_we2_eom={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if rr_by_we2.get(we,0)>0}
+# Carry EOM AR% forward to all WEs until next EOM (for week-over-week display)
+ar_pct_we2={}
+_last_ar=None
+for _we in sorted(set(list(rr_by_we2.keys())+list(up_by_eom.keys()))):
+    if _we in ar_pct_we2_eom:
+        _last_ar=ar_pct_we2_eom[_we]
+    if _last_ar is not None:
+        ar_pct_we2[_we]=_last_ar
 
 # Showing conversion from guest card
 gc_rows=read_sheet(FILES['guest_card'])
