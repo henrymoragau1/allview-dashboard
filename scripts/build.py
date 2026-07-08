@@ -789,7 +789,7 @@ D2['scorecard']=scorecard_rows
 # Build per-territory scorecard rows (for EOS territory filter)
 TERS_SC=['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE']
 for ter in TERS_SC:
-    last_nps_ter=None
+    last_nps_ter=None; last_ar_ter=None
     for we in all_sc_we:
         # Vacancy/portfolio from vac_donut2/port_counts we: keys
         we_key='we:'+we
@@ -808,16 +808,19 @@ for ter in TERS_SC:
                  7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}[we_dt.month]
         yr_str=str(we_dt.year)
         ar_ter=DATA.get('ar_pct',{}).get(f'{yr_str}|{mo_name}|{ter}|')
+        if ar_ter is not None: last_ar_ter=ar_ter
+        elif last_ar_ter is not None: ar_ter=last_ar_ter
         scorecard_rows.append({
             'we':we,'territory':ter,'proptype':'',
             'unit_count':unit_count,'vacant':vacant,'vac_pct':vac_pct,
             'nps':last_nps_ter,
             'opened_wo':0,'rent_unit':None,
-            'lr_pct':lr_pct_we.get(we),  # all-territory LR (best available)
-            'unit_turn':ut_cum.get(we),   # all-territory UT (best available)
-            'ar_pct':ar_ter,'concessions':0,
-        'show_conv':show_conv_ter_we.get(ter,{}).get(we),
-        'vac_loss':vac_loss_ter_we.get(ter,{}).get(we,0) or None,
+            'lr_pct':lr_pct_we.get(we),
+            'unit_turn':ut_cum.get(we),
+            'ar_pct':ar_ter if ar_ter else last_ar_ter,
+            'concessions':0,
+            'show_conv':show_conv_ter_we.get(ter,{}).get(we),
+            'vac_loss':vac_loss_ter_we.get(ter,{}).get(we,0) or None,
         })
 D2['scorecard']=scorecard_rows  # update with per-territory rows added
 
@@ -841,6 +844,13 @@ for we in all_sc_we:
         'vac_loss':round(vac_loss_we.get(we,0),2),
         'vac_rate':vac_rate_we.get(we),
     })
+# Carry AR% forward week-over-week (EOM value persists until next EOM)
+last_ar_eos=None
+for r in eos_rows:
+    if r.get('ar_pct') is not None:
+        last_ar_eos=r['ar_pct']
+    elif last_ar_eos is not None:
+        r['ar_pct']=last_ar_eos
 D2['eos']=eos_rows
 print(f"  scorecard rows: {len(scorecard_rows)}, eos rows: {len(eos_rows)}")
 
