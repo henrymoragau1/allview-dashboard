@@ -1485,12 +1485,13 @@ function renderScorecard() {
         : null;
 
       // AR% = sum(unpaid) / sum(rent) * 100 — approximate via ar_pct * rent_unit * unit_count
-      var arValid = grp.filter(function(r){ return r.ar_pct != null && r.rent_unit != null; });
+      // AR% weighted avg by unit_count (don't require rent_unit)
+      var arValid = grp.filter(function(r){ return r.ar_pct != null; });
       var ar_pct  = null;
       if (arValid.length) {
-        var arNum = arValid.reduce(function(s,r){ return s + r.ar_pct/100 * r.rent_unit * r.unit_count; }, 0);
-        var arDen = arValid.reduce(function(s,r){ return s + r.rent_unit * r.unit_count; }, 0);
-        ar_pct = arDen > 0 ? Math.round(arNum/arDen*10000)/100 : null;
+        var arWt  = arValid.reduce(function(s,r){ return s + (r.unit_count||1); }, 0);
+        var arNum = arValid.reduce(function(s,r){ return s + r.ar_pct*(r.unit_count||1); }, 0);
+        ar_pct = arWt > 0 ? Math.round(arNum/arWt*100)/100 : null;
       }
 
       merged.push({we:we, unit_count:uc, vacant:vc, vac_pct:vp,
