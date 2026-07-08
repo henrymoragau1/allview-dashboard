@@ -777,12 +777,20 @@ for we in all_sc_we:
     vacant=vac_cnt_we.get(we,0)
     vac_pct=round(vacant/unit_count*100,2) if unit_count else 0
     if we in nps_cum: last_nps_v=nps_cum[we]
+    # Get month name from WE date for rr_avg/concessions lookup
+    _SC_MNAMES={1:'January',2:'February',3:'March',4:'April',5:'May',6:'June',
+                7:'July',8:'August',9:'September',10:'October',11:'November',12:'December'}
+    _we_dt=datetime.datetime.strptime(we,'%Y-%m-%d')
+    _yr=str(_we_dt.year); _mo=_SC_MNAMES[_we_dt.month]
+    _ru=D2.get('rr_avg',{}).get(f'{_yr}|{_mo}||')  # avg rent/unit for this month
+    # WE-level concessions: sum of concession amounts for this specific WE
+    _conc=sum(c.get('amount',0) for c in D2.get('concessions',[]) if c.get('we')==we)
     scorecard_rows.append({
         'we':we,'territory':'','proptype':'',
         'unit_count':unit_count,'vacant':vacant,'vac_pct':vac_pct,
         'nps':last_nps_v,
-        'opened_wo':0,'rent_unit':None,'lr_pct':lr_pct_we.get(we),
-        'unit_turn':ut_cum.get(we),'ar_pct':ar_pct_we2.get(we),'concessions':0,
+        'opened_wo':0,'rent_unit':_ru,'lr_pct':lr_pct_we.get(we),
+        'unit_turn':ut_cum.get(we),'ar_pct':ar_pct_we2.get(we),'concessions':_conc,
     })
 D2['scorecard']=scorecard_rows
 
