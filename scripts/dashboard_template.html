@@ -154,7 +154,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
 <body>
 <div class="hdr">
   <div class="logo">AllView <span>Real Estate</span></div>
-  <div class="hdr-note">Data: Jan 2025 – Jun 2026</div>
+  <div class="hdr-note">Data: Jan 2025 – Jul 2026</div>
 </div>
 
 <div class="tabs">
@@ -1072,24 +1072,28 @@ function renderStatic() {
     else snapLabel = 'EOM: June 2026 (latest)';
     subEl.textContent = 'Snapshot: ' + snapLabel + ' · sorted by days vacant';
   }
-  // Update vacancy KPI: overall % + count
-  const totalVacUnrented = Object.entries(vacSnapFiltered)
-    .filter(([k])=>k!=='TBD' && k!=='Mid OC').reduce((s,[,v])=>s+v,0);
-  const totalPortfolio = Object.entries(portMap)
-    .filter(([k])=>k!=='TBD').reduce((s,[,v])=>s+v,0);
-  const overallVacPct = totalPortfolio > 0
-    ? (Math.round(totalVacUnrented / totalPortfolio * 1000) / 10)
-    : 0;
-  // For the unit count KPI: always use a point-in-time WE snapshot (not cumulative eom:|||)
-  // Use the selected WE, or latest WE if no WE filter
-  var kpiWE     = we || D2.latest_we || '';
+  // Update vacancy KPI: point-in-time WE snapshot for BOTH % and count
+  // Matches Power BI: vacant(ter) / portfolio(ter) at the selected or latest WE
+  var kpiWE      = we || D2.latest_we || '';
   var kpiSnapKey = kpiWE ? 'we:' + kpiWE : 'we:' + (D2.latest_we || '');
-  var kpiVacSnap = D2.vac_donut2[kpiSnapKey] || {};
-  // Filter by territory if selected
-  var kpiVacCount = 0;
+  var kpiVacSnap  = D2.vac_donut2[kpiSnapKey] || {};
+  var kpiPortSnap = D2.port_counts[kpiSnapKey] || {};
+  var kpiVacCount = 0; var kpiPortCount = 0;
   Object.keys(kpiVacSnap).forEach(function(ter) {
-    if (!t || ter === t) kpiVacCount += kpiVacSnap[ter];
+    if (ter==='TBD' || ter==='Mid OC') return;
+    if (!t || ter === t) {
+      kpiVacCount += kpiVacSnap[ter]||0;
+      kpiPortCount += kpiPortSnap[ter]||0;
+    }
   });
+  // Fallback to portMap if WE snapshot missing portfolio data
+  if (!kpiPortCount) {
+    kpiPortCount = Object.entries(portMap)
+      .filter(function(e){return e[0]!=='TBD' && (!t||e[0]===t);})
+      .reduce(function(s,e){return s+e[1];},0);
+  }
+  const overallVacPct = kpiPortCount > 0
+    ? (Math.round(kpiVacCount / kpiPortCount * 1000) / 10) : 0;
 
   // Format snapshot date as MM/DD/YYYY
   var snapFormatted = kpiWE
