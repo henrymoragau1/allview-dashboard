@@ -336,7 +336,9 @@ for r in port_rows[1:]:
         port_cnt[f"eom:{year}|"][ter]+=1
         port_cnt[f"eom:|{month}"][ter]+=1
         port_cnt["eom:|||"][ter]+=1
-D2['port_counts']={k:dict(v) for k,v in port_cnt.items()}
+# Remove 'we:' keys with fewer than 100 units (partial/bad snapshots)
+D2['port_counts']={k:dict(v) for k,v in port_cnt.items()
+                   if not k.startswith('we:') or sum(v.values())>=100}
 
 # Vac top
 def make_display(prop,unit):
