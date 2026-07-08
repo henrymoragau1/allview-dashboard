@@ -679,16 +679,14 @@ for r in lr_rows2[1:]:
     elif status in ('Move-Out','Changed to MTM'): lr_we[we_str]['M']+=1
 lr_pct_we={we:round(v['R']/(v['R']+v['M'])*100,2) for we,v in lr_we.items() if (v['R']+v['M'])>0}
 
-# AR% per EOM WE
+# AR% per WE = total unpaid / total rent roll at each weekly snapshot
+# This matches Power BI which shows the actual weekly AR% (not just EOM)
 up_rows2=read_sheet(FILES['unpaid'])
-up_eom2=eom_we_map(up_rows2,15,14,16)
-up_by_eom=defaultdict(float)
+up_by_we2=defaultdict(float)
 for r in up_rows2[1:]:
     if not r or not r[16] or not hasattr(r[16],'strftime'): continue
-    yr=str(r[15]).strip(); mo=str(r[14]).strip(); we=r[16]
-    if up_eom2.get((yr,mo))!=we: continue
     amt=r[8] if isinstance(r[8],(int,float)) and r[8] and r[8]>0 else 0
-    if amt>0: up_by_eom[we.strftime('%Y-%m-%d')]+=amt
+    if amt>0: up_by_we2[r[16].strftime('%Y-%m-%d')]+=amt
 rr_rows2=read_sheet(FILES['rent_roll'])
 rr_by_we2=defaultdict(float)
 for r in rr_rows2[1:]:
@@ -697,15 +695,8 @@ for r in rr_rows2[1:]:
     if not we: continue
     rent=r[9] if isinstance(r[9],(int,float)) and r[9] and r[9]>0 else 0
     rr_by_we2[we.strftime('%Y-%m-%d')]+=rent
-ar_pct_we2_eom={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if rr_by_we2.get(we,0)>0}
-# Carry EOM AR% forward to all WEs until next EOM (for week-over-week display)
-ar_pct_we2={}
-_last_ar=None
-for _we in sorted(set(list(rr_by_we2.keys())+list(up_by_eom.keys()))):
-    if _we in ar_pct_we2_eom:
-        _last_ar=ar_pct_we2_eom[_we]
-    if _last_ar is not None:
-        ar_pct_we2[_we]=_last_ar
+ar_pct_we2={we:round(up_by_we2[we]/rr_by_we2[we]*100,2)
+             for we in up_by_we2 if rr_by_we2.get(we,0)>0}
 
 # Showing conversion from guest card
 gc_rows=read_sheet(FILES['guest_card'])
