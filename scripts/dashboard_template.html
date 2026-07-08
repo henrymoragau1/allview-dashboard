@@ -1584,12 +1584,9 @@ function renderEOS() {
 
   // Determine if territory/PT filter is truly a subset or effectively "all"
   var terSubset = F.ters.length > 0 && F.ters.length < ALL_TERS_7.length;
-  // PT filter is "active subset" only if SOME but NOT ALL property types selected
-  // Get all distinct PTs from scorecard data
-  var allKnownPTs = [];
-  (D2.scorecard||[]).forEach(function(r){ if(r.proptype && allKnownPTs.indexOf(r.proptype)<0) allKnownPTs.push(r.proptype); });
-  if (!allKnownPTs.length) allKnownPTs = ALL_PTS_2;
-  var ptActive = F.pts.length > 0 && F.pts.length < allKnownPTs.length;
+  // PT filter: match against EXACTLY the options shown in the filter dropdown
+  var FILTER_PTS = ['Single-Family','Multi-Family','Commercial'];
+  var ptActive = F.pts.length > 0 && F.pts.length < FILTER_PTS.length;
 
   if (terSubset || ptActive) {
     // Derive EOS rows by aggregating per-territory scorecard data
