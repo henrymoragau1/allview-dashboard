@@ -702,13 +702,22 @@ ar_pct_we2={we:round(ar/rr_by_we2[we]*100,2) for we,ar in up_by_eom.items() if r
 # Showing conversion from guest card
 gc_rows=read_sheet(FILES['guest_card'])
 gc_we=defaultdict(lambda:{'total':0,'with_showing':0})
+gc_ter_we=defaultdict(lambda:defaultdict(lambda:{'total':0,'with_showing':0}))
 for r in gc_rows[1:]:
     if not r or not r[15] or not hasattr(r[15],'strftime'): continue
     we_str=r[15].strftime('%Y-%m-%d')
     gc_we[we_str]['total']+=1
     showings=r[5] if isinstance(r[5],(int,float)) else 0
     if showings>0: gc_we[we_str]['with_showing']+=1
+    # Resolve territory from property address (col 11)
+    addr=str(r[11]).strip() if r[11] else str(r[0]).strip()
+    ter_gc=(resolve(addr) or {}).get('territory','')
+    if ter_gc and ter_gc not in SKIP_TERS:
+        gc_ter_we[ter_gc][we_str]['total']+=1
+        if showings>0: gc_ter_we[ter_gc][we_str]['with_showing']+=1
 show_conv_we={we:round(v['with_showing']/v['total']*100,2) for we,v in gc_we.items() if v['total']>0}
+show_conv_ter_we={ter:{we:round(v['with_showing']/v['total']*100,2) for we,v in wes.items() if v['total']>0}
+                   for ter,wes in gc_ter_we.items()}
 
 # Vacancy $ Loss Rate (Posted=Yes, col AA posted_at, monthly reset, mgmt_fee)
 mgmt_fee_map={}
@@ -732,6 +741,7 @@ for r in port_rows[1:]:
 
 vac_cnt_we=defaultdict(int)
 vac_loss_we=defaultdict(float)
+vac_loss_ter_we=defaultdict(lambda:defaultdict(float))
 for r in vac_rate3[1:]:
     if not r or not r[18] or not hasattr(r[18],'strftime'): continue
     if str(r[2]).strip()!='Vacant-Unrented': continue
@@ -749,7 +759,9 @@ for r in vac_rate3[1:]:
     start=max(r[26], month_start)
     days=(we_dt-start).days+1
     if days<=0: continue
-    vac_loss_we[we_str]+=round(days*(sched/30)*fee,2)
+    loss=round(days*(sched/30)*fee,2)
+    vac_loss_we[we_str]+=loss
+    vac_loss_ter_we[ter][we_str]+=loss
 
 # Vacancy rate per WE
 vac_rate_we={we:round(vac_cnt_we[we]/port_cnt_we[we]*100,2) if port_cnt_we.get(we) else 0 for we in vac_cnt_we}
@@ -804,6 +816,8 @@ for ter in TERS_SC:
             'lr_pct':lr_pct_we.get(we),  # all-territory LR (best available)
             'unit_turn':ut_cum.get(we),   # all-territory UT (best available)
             'ar_pct':ar_ter,'concessions':0,
+        'show_conv':show_conv_ter_we.get(ter,{}).get(we),
+        'vac_loss':vac_loss_ter_we.get(ter,{}).get(we,0) or None,
         })
 D2['scorecard']=scorecard_rows  # update with per-territory rows added
 
