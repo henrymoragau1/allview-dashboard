@@ -921,21 +921,8 @@ function renderStatic() {
   //   WE filter selected  → use exact WE snapshot
   //   Month filter only   → use EOM WE for that month (last WE of the month)
   //   No filters          → use latest EOM (June 2026)
-  let vacTerMap;
-  if (we) {
-    // Exact week selected
-    vacTerMap = D2.vac_donut2['we:'+we] || {};
-  } else if (y && mo) {
-    vacTerMap = D2.vac_donut2['eom:'+y+'|'+mo] || {};
-  } else if (mo) {
-    // Month only — sum across all years at EOM
-    vacTerMap = D2.vac_donut2['eom:|'+mo] || {};
-  } else if (y) {
-    vacTerMap = D2.vac_donut2['eom:'+y+'|'] || {};
-  } else {
-    // Default: latest EOM (June 2026)
-    vacTerMap = D2.vac_donut2['eom:2026|June'] || {};
-  }
+  // Use same snapKey as portMap for consistency
+  let vacTerMap = D2.vac_donut2[snapKey] || D2.vac_donut2['we:' + D2.latest_we] || {};
 
   // Apply territory filter if set
   const vacTerMapFiltered = t
@@ -969,12 +956,30 @@ function renderStatic() {
   // Resolve a single consistent key for BOTH vacancy and portfolio counts
   // Same key is used for numerator (vac_donut2) and denominator (port_counts)
   // This avoids WE-date mismatches between the two files
+  // snapKey: use point-in-time WE snapshot when possible to avoid
+  // cumulative EOM sums which inflate vacancy %
   let snapKey;
-  if (we)          snapKey = 'we:'  + we;
-  else if (y && mo) snapKey = 'eom:' + y + '|' + mo;
-  else if (mo)      snapKey = 'eom:|' + mo;
-  else if (y)       snapKey = 'eom:' + y + '|';
-  else              snapKey = 'eom:|||';  // All years = weighted avg across all EOM months
+  if (we) {
+    snapKey = 'we:' + we;
+  } else if (y && mo) {
+    snapKey = 'eom:' + y + '|' + mo;
+  } else if (mo) {
+    snapKey = 'eom:|' + mo;
+  } else if (y) {
+    // Year only: find latest WE for that year with full data (>100 units)
+    var weKeysForYear = Object.keys(D2.port_counts)
+      .filter(function(k){
+        if (!k.startsWith('we:'+y)) return false;
+        var tot=Object.values(D2.port_counts[k]).reduce(function(s,v){return s+v;},0);
+        return tot > 100;
+      }).sort();
+    snapKey = weKeysForYear.length
+      ? weKeysForYear[weKeysForYear.length-1]
+      : ('we:' + D2.latest_we);
+  } else {
+    // No filter: use latest_we (already validated at build time)
+    snapKey = 'we:' + D2.latest_we;
+  }
 
   const portMapRaw = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
   const vacSnapRaw = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||']  || {};
