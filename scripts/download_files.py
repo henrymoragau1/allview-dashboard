@@ -1,6 +1,6 @@
 """
 download_files.py
-Downloads all 19 AllView Excel files from personal OneDrive.
+Downloads all 21 AllView Excel files from personal OneDrive.
 Uses requests with session handling for personal OneDrive "Anyone" links.
 """
 
@@ -58,6 +58,10 @@ FILE_LINKS = {
         'https://1drv.ms/x/c/7e1a6235327bfe3a/IQDKMJxWJS8gTpZhbAc_MqBFAeHL9Q87yrA7wBq7uAx1QI8?e=7h9x6v',
     'Yelp-Google_Reviews.xlsx':
         'https://1drv.ms/x/c/7e1a6235327bfe3a/IQDQXfoH5ci9Qr8DnAloTOlHAf87jQg7da2vziFVdUDEua8?e=0DDWE0',
+    'Active_Listings_-_Performance.xlsx':
+        'https://1drv.ms/x/c/7e1a6235327bfe3a/IQDF39GDg437SbKrf3uS2ZtEAbxNAO3I1Ga6qoJ26xuVfvU?e=j807ko',
+    'Off_Market_Listings_-_Performance__Historical_Data_.xlsx':
+        'https://1drv.ms/x/c/7e1a6235327bfe3a/IQBk7NK4-7NCTJ5Hg9zIOMpXAbfm015W5Xtwh01I0u7ptFA?e=2GUtbe',
 }
 
 
@@ -175,7 +179,7 @@ def main():
             print(f'  - {f}')
         sys.exit(1)
     else:
-        print('All 19 files ready. Running build.py next...')
+        print('All 21 files ready. Running build.py next...')
     print('=' * 65)
 
 
