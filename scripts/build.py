@@ -1152,6 +1152,7 @@ try:
             if act_cv is not None: d['act_conv'].append(act_cv)
 
     # ── Active listings (current snapshot) ───────────────────────────────────
+    sm_active_listings = []  # per-property detail for expandable rows
     for r in sm_active_rows[1:]:
         if not r or not r[0]: continue
         raw    = str(r[0]).strip()
@@ -1171,6 +1172,19 @@ try:
         d['leads']  += leads; d['sched']  += sched
         d['actual'] += actual; d['listings'] += 1
         if dom > 0: d['dom'].append(dom)
+        # Store per-listing detail
+        s2s = round(actual/sched*100,1) if sched>0 else None
+        # Clean display address: remove bed/bath, keep street+city
+        disp_addr = re.sub(r',\s*[A-Z]{2},\s*\d{5}.*$','',p1).strip()
+        sm_active_listings.append({
+            'address': disp_addr,
+            'territory': ter,
+            'leads': leads, 'sched': sched, 'actual': actual,
+            'dom': dom,
+            's2s_pct': s2s,  # sched→actual showing %
+        })
+    # Sort by territory then leads desc
+    sm_active_listings.sort(key=lambda x:(x['territory'],-x['leads']))
 
     # ── Apps received per territory (from rental_applications file) ───────────
     app_ter_all = defaultdict(lambda:{'received':0,'approved':0})
@@ -1200,6 +1214,7 @@ try:
                        for ter,wes in sm_by_ter_we.items()},
         'by_ter_all': {ter:_sm_fin(d,ter) for ter,d in sm_by_ter_all.items()},
         'active_ter': {ter:_sm_fin(d) for ter,d in sm_active_ter.items()},
+        'active_listings': sm_active_listings,
         'mismatches': SM_MISMATCHES,
     }
     total_offmkt_rows = len(sm_offmkt_rows) - 1
