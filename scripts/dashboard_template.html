@@ -403,51 +403,73 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
   </div>
 </div>
 
-<div class="page" id="maintenance">
-  <p class="ptitle">Maintenance &amp; Work Orders</p>
-  <p class="psub" id="sub-maintenance">5,660 total work orders · 2025</p>
-  <div class="krow">
-    <div class="kpi sge" id="kpi-wo-completed"><div class="klbl">Completed</div><div class="kval">3,823</div><div class="ksub">67.5% of all orders</div></div>
-    <div class="kpi" id="kpi-wo-canceled"><div class="klbl">Canceled</div><div class="kval">809</div><div class="ksub">14.3%</div></div>
-    <div class="kpi cor" id="kpi-wo-open"><div class="klbl">Still Open</div><div class="kval">450+</div><div class="ksub">Assigned + Scheduled</div></div>
-    <div class="kpi gld"><div class="klbl">Avg Unit Turn</div><div class="kval">17.51</div><div class="ksub">Days · 150 completed</div></div>
-    <div class="kpi" id="kpi-wo-nocharge"><div class="klbl">No Charge Completed</div><div class="kval">533</div><div class="ksub">Resolved without billing</div></div>
-    <div class="kpi cor" id="kpi-ar"><div class="klbl">A/R % (Jun 2026)</div><div class="kval">0.60%</div><div class="ksub">$38,494 · 57 tenants</div></div>
-  </div>
-  <div class="g2">
-    <div class="card" style="margin-bottom:16px">
-    <p class="ctitle">Work Order Completion Time by Territory</p>
-    <p class="csub">Average days from Created to Completed</p>
-    <canvas id="c-wo-completion" height="180"></canvas>
-  </div>
-  <div class="card">
-      <div class="ctitle">Work Order Status</div><div class="csub">All 5,660 orders by status</div>
-      <div class="cw sh"><canvas id="c-wos"></canvas></div>
-      <div class="leg" id="wos-leg"></div>
-    </div>
-    <div class="card"><div class="ctitle">Top Issue Categories</div><div class="csub">Most common maintenance requests</div><div class="cw"><canvas id="c-woi"></canvas></div></div>
-  </div>
-  <div class="g2">
-    <div class="card">
-      <div class="ctitle">Owner Concessions</div><div class="csub">Management errors that cost AllView money</div>
-      <table class="dt"><thead><tr><th>Property</th><th>Month</th><th>Amount</th><th>Issue</th></tr></thead><tbody id="con-tbody">
-        <tr><td>3344 Bajo Ct, Carlsbad</td><td>Apr 2025</td><td class="ca">$5,700</td><td>Work done without approval</td></tr>
-        <tr><td>21436 Avery Lane, HB</td><td>Jun 2025</td><td class="ca">$3,200</td><td>Lease agreement error</td></tr>
-        <tr><td>1215 E Balboa, NB</td><td>Apr 2025</td><td class="ca">$1,500</td><td>Keys lost</td></tr>
-        <tr><td>1043 Estes St, El Cajon</td><td>Jun 2025</td><td class="ca">$1,500</td><td>Tenant renewal error</td></tr>
-        <tr><td>215 Avenida Serra</td><td>Sep 2025</td><td class="ca">$500</td><td>Missed rent increase</td></tr>
-        <tr><td>431 Venice Way, LA</td><td>Sep 2025</td><td class="ca">$450</td><td>Ignored maintenance</td></tr>
-        <tr><td>530 K St #605, SD</td><td>Jun 2025</td><td class="ca">$450</td><td>No move-in inspection</td></tr>
-      </tbody></table>
-    </div>
-    <div class="card">
-      <div class="ctitle">A/R % — Month over Month</div>
-      <div class="csub" id="up-sub">AR = Total Unpaid (col I) ÷ Total Monthly Rent · EOM snapshot per month</div>
-      <div class="cw tall"><canvas id="c-ar"></canvas></div>
-    </div>
-  </div>
-</div>
 
+
+  <!-- ShowMojo Leasing Funnel -->
+  <div style="margin-top:20px">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+      <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
+      <p style="font-size:12px;color:var(--muted);margin:0">ShowMojo · Leads → Showings → Applications</p>
+    </div>
+
+    <!-- 4 KPI cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px">
+        <div class="klbl">Total Leads</div>
+        <div class="kval" id="sm-kpi-leads">—</div>
+        <div class="ksub">Inquiries received</div>
+      </div>
+      <div class="kpi sky" style="padding:14px">
+        <div class="klbl">Actual Showings</div>
+        <div class="kval" id="sm-kpi-showings">—</div>
+        <div class="ksub">Lead→Show: <span id="sm-kpi-l2s" style="font-weight:700">—</span></div>
+      </div>
+      <div class="kpi sge" style="padding:14px">
+        <div class="klbl">Applications</div>
+        <div class="kval" id="sm-kpi-apps">—</div>
+        <div class="ksub">Show→App: <span id="sm-kpi-s2a" style="font-weight:700">—</span></div>
+      </div>
+      <div class="kpi gld" style="padding:14px">
+        <div class="klbl">Avg Days on Market</div>
+        <div class="kval" id="sm-kpi-dom">—</div>
+        <div class="ksub">Until leased</div>
+      </div>
+    </div>
+
+    <!-- Charts row -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <p class="ctitle">Leads → Showings → Apps by Territory</p>
+        <p class="csub">Historical off-market listings</p>
+        <canvas id="c-sm-funnel" height="200"></canvas>
+      </div>
+      <div class="card">
+        <p class="ctitle">Conversion Rates by Territory</p>
+        <p class="csub">Lead→Show % &amp; Show→App %</p>
+        <canvas id="c-sm-conv" height="200"></canvas>
+      </div>
+    </div>
+
+    <!-- Active listings table -->
+    <div class="card">
+      <p class="ctitle">Active Listings — Live Pipeline</p>
+      <p class="csub">Currently on market · ShowMojo data as of latest WE</p>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th>Territory</th>
+            <th style="text-align:center">Listings</th>
+            <th style="text-align:right">Leads</th>
+            <th style="text-align:right">Sched</th>
+            <th style="text-align:right">Actual</th>
+            <th style="text-align:center">Lead→Show %</th>
+            <th style="text-align:center">Avg Days Listed</th>
+          </tr></thead>
+          <tbody id="sm-active-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 <div class="page" id="satisfaction">
   <p class="ptitle">Owner NPS &amp; Reviews</p>
   <p class="psub" id="sub-satisfaction">Satisfaction tracking across territories and platforms</p>
@@ -921,13 +943,9 @@ function renderStatic() {
   //   WE filter selected  → use exact WE snapshot
   //   Month filter only   → use EOM WE for that month (last WE of the month)
   //   No filters          → use latest EOM (June 2026)
-  // Use same snapKey as portMap for consistency
-  let vacTerMap = D2.vac_donut2[snapKey] || D2.vac_donut2['we:' + D2.latest_we] || {};
 
-  // Apply territory filter if set
-  const vacTerMapFiltered = t
-    ? Object.fromEntries(Object.entries(vacTerMap).filter(([k]) => k === t))
-    : vacTerMap;
+
+
 
   // Build from filtVac for the top vacant table (still WE-based for that table)
   let filtVac;
@@ -966,20 +984,37 @@ function renderStatic() {
   } else if (mo) {
     snapKey = 'eom:|' + mo;
   } else if (y) {
-    // Year only: find latest WE for that year with full data (>100 units)
+    // Year only: find latest WE for that year with full data in BOTH port_counts AND vac_donut2
     var weKeysForYear = Object.keys(D2.port_counts)
       .filter(function(k){
         if (!k.startsWith('we:'+y)) return false;
         var tot=Object.values(D2.port_counts[k]).reduce(function(s,v){return s+v;},0);
-        return tot > 100;
+        return tot > 100 && D2.vac_donut2[k] && Object.keys(D2.vac_donut2[k]).length > 0;
       }).sort();
     snapKey = weKeysForYear.length
       ? weKeysForYear[weKeysForYear.length-1]
-      : ('we:' + D2.latest_we);
+      : ('eom:' + y + '|');
   } else {
-    // No filter: use latest_we (already validated at build time)
-    snapKey = 'we:' + D2.latest_we;
+    // No filter: use latest_we, but verify it has vacancy data
+    var candidateKey = 'we:' + D2.latest_we;
+    if (D2.vac_donut2[candidateKey] && Object.keys(D2.vac_donut2[candidateKey]).length > 0) {
+      snapKey = candidateKey;
+    } else {
+      // Fall back to most recent we: key that has both vacancy and portfolio data
+      var validWeKeys = Object.keys(D2.vac_donut2)
+        .filter(function(k){
+          return k.startsWith('we:') && D2.port_counts[k] &&
+                 Object.values(D2.port_counts[k]).reduce(function(s,v){return s+v;},0) > 100;
+        }).sort();
+      snapKey = validWeKeys.length ? validWeKeys[validWeKeys.length-1] : 'eom:|||';
+    }
   }
+  // vacTerMap uses snapKey (must be after snapKey is defined)
+  let vacTerMap = D2.vac_donut2[snapKey] || D2.vac_donut2['we:' + D2.latest_we] || {};
+  // Apply territory filter to vacTerMap (must be after vacTerMap is defined)
+  const vacTerMapFiltered = t
+    ? Object.fromEntries(Object.entries(vacTerMap).filter(function(e){ return e[0] === t; }))
+    : vacTerMap;
 
   const portMapRaw = D2.port_counts[snapKey] || D2.port_counts['eom:|||'] || {};
   const vacSnapRaw = D2.vac_donut2[snapKey]  || D2.vac_donut2['eom:|||']  || {};
@@ -2362,6 +2397,110 @@ function printDashboard() {
   window.print();
 }
 
+
+
+// ── SHOWMOJO: Leads → Showings → Apps Funnel ─────────────────────────────────
+function renderShowMojo() {
+  var sm = D2.showmojo;
+  if (!sm) return;
+  var F    = getFilters();
+  var ALL_TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var ters = F.ters.length ? F.ters.filter(function(t){return ALL_TERS.indexOf(t)>=0;}) : ALL_TERS;
+
+  // Use WE-specific data if WE filter active, else all-time
+  var useWE = F.wes.length===1 ? F.wes[0] : null;
+  function getD(ter) {
+    if (useWE && sm.by_ter_we[ter] && sm.by_ter_we[ter][useWE])
+      return sm.by_ter_we[ter][useWE];
+    return sm.by_ter_all[ter] || {leads:0,sched:0,actual:0,show_to_app_pct:null,apps_received:0,avg_dom:null,l2s_pct:null,listings:0};
+  }
+
+  // ── KPIs ─────────────────────────────────────────────────────────────────
+  var totLeads=0, totActual=0, totApps=0, domArr=[], actConvArr=[];
+  ters.forEach(function(t){
+    var d=getD(t);
+    totLeads  += d.leads||0;
+    totActual += d.actual||0;
+    totApps   += d.apps_received||0;
+    if (d.avg_dom)          domArr.push(d.avg_dom);
+    if (d.show_to_app_pct)  actConvArr.push(d.show_to_app_pct);
+  });
+  var l2s = totLeads  > 0 ? Math.round(totActual/totLeads*1000)/10  : null;
+  var s2a = totActual > 0 ? Math.round(totApps/totActual*1000)/10   : null;
+  var dom = domArr.length ? Math.round(domArr.reduce(function(s,v){return s+v;},0)/domArr.length*10)/10 : null;
+
+  function setT(id,v){var el=document.getElementById(id);if(el)el.textContent=v!=null?v:'—';}
+  setT('sm-kpi-leads',    totLeads.toLocaleString());
+  setT('sm-kpi-showings', totActual.toLocaleString());
+  setT('sm-kpi-apps',     totApps.toLocaleString());
+  setT('sm-kpi-dom',      dom!=null ? dom+'d' : '—');
+  setT('sm-kpi-l2s',      l2s!=null ? l2s+'%' : '—');
+  setT('sm-kpi-s2a',      s2a!=null ? s2a+'%' : '—');
+
+  // ── Funnel chart ──────────────────────────────────────────────────────────
+  var leads   = ters.map(function(t){return getD(t).leads||0;});
+  var sched   = ters.map(function(t){return getD(t).sched||0;});
+  var actual  = ters.map(function(t){return getD(t).actual||0;});
+  var appsRcv = ters.map(function(t){return getD(t).apps_received||0;});
+
+  mkChart('c-sm-funnel','bar',ters,[
+    {label:'Leads',         data:leads,   backgroundColor:'rgba(42,127,191,0.75)', borderRadius:3},
+    {label:'Sched Showing', data:sched,   backgroundColor:'rgba(201,168,76,0.75)', borderRadius:3},
+    {label:'Actual Showing',data:actual,  backgroundColor:'rgba(46,125,83,0.75)',  borderRadius:3},
+    {label:'Applications',  data:appsRcv, backgroundColor:'rgba(185,59,46,0.75)', borderRadius:3},
+  ],{
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}},
+    scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10}}}}
+  });
+
+  // ── Conversion rate chart ─────────────────────────────────────────────────
+  var l2sPcts = ters.map(function(t){
+    var d=getD(t);
+    return d.leads>0 ? Math.round(d.actual/d.leads*1000)/10 : 0;
+  });
+  var s2aPcts = ters.map(function(t){
+    var d=getD(t);
+    return d.actual>0 && d.apps_received>0
+      ? Math.round(d.apps_received/d.actual*1000)/10 : 0;
+  });
+
+  mkChart('c-sm-conv','bar',ters,[
+    {label:'Lead→Show %', data:l2sPcts, backgroundColor:'rgba(42,127,191,0.8)',  borderRadius:3},
+    {label:'Show→App %',  data:s2aPcts, backgroundColor:'rgba(46,125,83,0.8)',   borderRadius:3},
+  ],{
+    plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}},
+    scales:{
+      x:{ticks:{font:{size:10}}},
+      y:{beginAtZero:true,ticks:{callback:function(v){return v+'%';},font:{size:10}}}
+    }
+  });
+
+  // ── Active listings table ─────────────────────────────────────────────────
+  var tbody=document.getElementById('sm-active-tbody');
+  if (!tbody) return;
+  var TER_COLORS_SM={'North OC':'#2A7FBF','South OC':'#4B7C6F','SD Properties':'#7B58A6',
+    'Commercial':'#D95C3A','STONE':'#4A4A4A','Elderkin':'#E07B39','Brenden':'#9EAAAD'};
+  var rows='';
+  ters.forEach(function(t,i) {
+    var d=sm.active_ter[t];
+    if (!d||!d.listings) return;
+    var l2s_a=d.leads>0 ? Math.round(d.actual/d.leads*1000)/10 : null;
+    var bg=i%2===0?'#fff':'#F9F7F3';
+    var dot='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(TER_COLORS_SM[t]||'#aaa')+';margin-right:6px"></span>';
+    rows+='<tr style="background:'+bg+'">'+
+      '<td style="padding:7px 12px;font-weight:600">'+dot+t+'</td>'+
+      '<td style="text-align:center;padding:7px 12px">'+d.listings+'</td>'+
+      '<td style="text-align:right;padding:7px 12px">'+d.leads.toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:7px 12px">'+d.sched.toLocaleString()+'</td>'+
+      '<td style="text-align:right;padding:7px 12px">'+d.actual.toLocaleString()+'</td>'+
+      '<td style="text-align:center;padding:7px 12px;font-weight:700;color:'+(l2s_a!=null&&l2s_a>=15?'#2E7D53':l2s_a!=null&&l2s_a>=8?'#B78A00':'#B93B2E')+'">'+
+        (l2s_a!=null?l2s_a+'%':'—')+'</td>'+
+      '<td style="text-align:center;padding:7px 12px">'+(d.avg_dom?d.avg_dom+'d':'—')+'</td>'+
+      '</tr>';
+  });
+  tbody.innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No active listings</td></tr>';
+}
+
 // ── TAB SWITCHING ─────────────────────────────────────
 function show(id, btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -2449,6 +2588,8 @@ function applyF() {
   updateFilterBadge();
   render();
   renderStatic();
+  renderShowMojo();
+  renderShowMojo();
   renderScorecard();
   renderEOS();
   renderCEO();
@@ -2474,6 +2615,8 @@ function resetF() {
   document.getElementById('btn-pt').innerHTML    = 'All Property Types <span class="msel-arrow">▾</span>';
   render();
   renderStatic();
+  renderShowMojo();
+  renderShowMojo();
   renderScorecard();
   renderEOS();
   renderCEO();
@@ -2487,6 +2630,8 @@ function resetF() {
 window.addEventListener('load', function() {
   render();
   renderStatic();
+  renderShowMojo();
+  renderShowMojo();
   renderScorecard();
   renderEOS();
   renderCEO();
