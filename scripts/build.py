@@ -1078,55 +1078,58 @@ except Exception as e:
 # ── SHOWMOJO: Leads → Showings funnel ────────────────────────────────────────
 print("[4f/7] Computing ShowMojo leads/showings data...")
 try:
-    import re as _re
-
     def _parse_offmkt_addr(raw):
         raw = str(raw).strip()
-        raw = _re.sub(r'\s+-\s+\d+\s+bed.*$',  '', raw, flags=_re.IGNORECASE).strip()
-        raw = _re.sub(r'\s+-\s+Studio.*$',       '', raw, flags=_re.IGNORECASE).strip()
-        raw = _re.sub(r',\s*\d+\s+(full|half).*$','', raw, flags=_re.IGNORECASE).strip()
+        raw = re.sub(r'\s+-\s+\d+\s+bed.*$',  '', raw, flags=re.IGNORECASE).strip()
+        raw = re.sub(r'\s+-\s+Studio.*$',       '', raw, flags=re.IGNORECASE).strip()
+        raw = re.sub(r',\s*\d+\s+(full|half).*$','', raw, flags=re.IGNORECASE).strip()
         return raw.rstrip(' -').strip()
 
     def _parse_active_addr(raw):
         raw = str(raw).strip()
         parts = raw.split(',')
         if len(parts) >= 3:
-            street = _re.sub(r'\s+-\s+[^,]+$', '', parts[0].strip()).strip()
-            city = parts[1].strip(); state = parts[2].strip()
+            street = re.sub(r'\s+-\s+[^,]+$', '', parts[0].strip()).strip()
+            city    = parts[1].strip()
+            state   = parts[2].strip()
             zipcode = parts[3].strip() if len(parts) > 3 else ''
             return f"{street} {city}, {state} {zipcode}".strip(), parts[0].strip()
         return raw, raw
 
+    # Use global resolve() + master_full which are already built earlier in build.py
     def _sm_resolve(parsed):
-        if parsed in master_map: return master_map[parsed]
-        norm = _re.sub(r'[^a-z0-9]','', parsed.lower())
-        if norm in master_norm: return master_norm[norm]
+        r = resolve(parsed)
+        if r: return r
+        # Extra fuzzy: street number + name prefix match
         parts = parsed.split()
         if parts:
             num = parts[0]
-            snu = _re.sub(r'\s*-\s*[a-z0-9/]+\s*$', '', parsed.lower()).strip()
-            for addr, attrs in master_map.items():
+            snu = re.sub(r'\s*-\s*[a-z0-9/]+\s*$', '', parsed.lower()).strip()
+            for addr, attrs in master_full.items():
                 if addr.startswith(num+' ') or addr.startswith(num+'-'):
                     if snu[:20] in addr.lower() or addr.lower()[:20] in snu:
                         return attrs
         return None
 
-    sm_active_rows  = read_sheet(FILES['sm_active'])
-    sm_offmkt_rows  = read_sheet(FILES['sm_offmkt'])
+    sm_active_rows = read_sheet(FILES['sm_active'])
+    sm_offmkt_rows = read_sheet(FILES['sm_offmkt'])
+    print(f"  SM files loaded: {len(sm_offmkt_rows)-1} off-mkt rows, {len(sm_active_rows)-1} active rows")
+    # Verify first row address and resolve
+    if len(sm_offmkt_rows) > 1:
+        _test_raw = str(sm_offmkt_rows[1][0]) if sm_offmkt_rows[1] else ''
+        _test_parsed = _parse_offmkt_addr(_test_raw)
+        _test_attrs = _sm_resolve(_test_parsed)
+        print(f"  SM test resolve: '{_test_parsed[:40]}' → {_test_attrs}")
 
-    # By territory + WE: leads, scheduled showings, actual showings, days on market
     sm_by_ter_we  = defaultdict(lambda: defaultdict(lambda:{
-        'leads':0,'sched':0,'actual':0,'dom':[],'listings':0}))
-    # All-time by territory
+        'leads':0,'sched':0,'actual':0,'act_conv':[],'dom':[],'listings':0}))
     sm_by_ter_all = defaultdict(lambda:{
-        'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
-    # Current active snapshot (all at same WE)
+        'leads':0,'sched':0,'actual':0,'act_conv':[],'dom':[],'listings':0})
     sm_active_ter = defaultdict(lambda:{
         'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
-
     SM_MISMATCHES = []
 
-    # Off-market (historical, has WE column)
+    # ── Off-market (historical) ───────────────────────────────────────────────
     for r in sm_offmkt_rows[1:]:
         if not r or not r[0]: continue
         parsed = _parse_offmkt_addr(str(r[0]))
@@ -1140,16 +1143,18 @@ try:
         leads  = int(r[1]) if isinstance(r[1],(int,float)) else 0
         sched  = int(r[2]) if isinstance(r[2],(int,float)) else 0
         actual = int(r[3]) if isinstance(r[3],(int,float)) else 0
+        act_cv = float(r[4]) if isinstance(r[4],(int,float)) and r[4]>0 else None
         dom    = float(r[7]) if isinstance(r[7],(int,float)) and r[7]>0 else 0
         for d in [sm_by_ter_we[ter][we_str], sm_by_ter_all[ter]]:
-            d['leads']    += leads; d['sched']    += sched
-            d['actual']   += actual; d['listings'] += 1
+            d['leads']  += leads; d['sched']  += sched
+            d['actual'] += actual; d['listings'] += 1
             if dom > 0: d['dom'].append(dom)
+            if act_cv is not None: d['act_conv'].append(act_cv)
 
-    # Active listings (current snapshot)
+    # ── Active listings (current snapshot) ───────────────────────────────────
     for r in sm_active_rows[1:]:
         if not r or not r[0]: continue
-        raw = str(r[0]).strip()
+        raw    = str(r[0]).strip()
         p1, p2 = _parse_active_addr(raw)
         attrs  = _sm_resolve(p1) or _sm_resolve(p2)
         we_raw = r[14]
@@ -1167,33 +1172,54 @@ try:
         d['actual'] += actual; d['listings'] += 1
         if dom > 0: d['dom'].append(dom)
 
-    # Serialize (convert dom lists to avg)
-    def _sm_finalize(d):
-        avg_dom = round(sum(d['dom'])/len(d['dom']),1) if d['dom'] else None
-        l2s = round(d['actual']/d['leads']*100,1) if d['leads'] > 0 else None
+    # ── Apps received per territory (from rental_applications file) ───────────
+    app_ter_all = defaultdict(lambda:{'received':0,'approved':0})
+    app_rows2 = read_sheet(FILES['applications'])
+    for r in app_rows2[1:]:
+        if not r or not r[27]: continue
+        attrs = resolve(str(r[27]).strip())
+        ter = (attrs or {}).get('territory','')
+        if not ter or ter in SKIP_TERS: continue
+        status = str(r[26]).strip().lower() if r[26] else ''
+        app_ter_all[ter]['received'] += 1
+        if status == 'approved': app_ter_all[ter]['approved'] += 1
+
+    def _sm_fin(d, ter=None):
+        avg_dom = round(sum(d['dom'])/len(d['dom']),1) if d.get('dom') else None
+        l2s     = round(d['actual']/d['leads']*100,1) if d.get('leads',0)>0 else None
+        s2a_sm  = round(sum(d['act_conv'])/len(d['act_conv']),1) if d.get('act_conv') else None
+        apps_d  = app_ter_all.get(ter,{}) if ter else {}
         return {'leads':d['leads'],'sched':d['sched'],'actual':d['actual'],
-                'avg_dom':avg_dom,'l2s_pct':l2s,'listings':d['listings']}
+                'avg_dom':avg_dom,'l2s_pct':l2s,'show_to_app_pct':s2a_sm,
+                'apps_received':apps_d.get('received',0),
+                'apps_approved':apps_d.get('approved',0),
+                'listings':d['listings']}
 
     D2['showmojo'] = {
-        'by_ter_we':  {ter:{we:_sm_finalize(d) for we,d in wes.items()}
+        'by_ter_we':  {ter:{we:_sm_fin(d,ter) for we,d in wes.items()}
                        for ter,wes in sm_by_ter_we.items()},
-        'by_ter_all': {ter:_sm_finalize(d) for ter,d in sm_by_ter_all.items()},
-        'active_ter': {ter:_sm_finalize(d) for ter,d in sm_active_ter.items()},
+        'by_ter_all': {ter:_sm_fin(d,ter) for ter,d in sm_by_ter_all.items()},
+        'active_ter': {ter:_sm_fin(d) for ter,d in sm_active_ter.items()},
         'mismatches': SM_MISMATCHES,
     }
+    total_offmkt_rows = len(sm_offmkt_rows) - 1
+    total_active_rows = len(sm_active_rows) - 1
+    total_matched = sum(d['listings'] for d in sm_by_ter_all.values()) + sum(d['listings'] for d in sm_active_ter.values())
+    print(f"  SM matched: {total_matched}/{total_offmkt_rows + total_active_rows} rows")
+    print(f"  SM by_ter_all: { {t:d['leads'] for t,d in sm_by_ter_all.items()} }")
     print(f"  ShowMojo: {sum(d['listings'] for d in sm_by_ter_all.values())} off-mkt + "
           f"{sum(d['listings'] for d in sm_active_ter.values())} active listings mapped")
     if SM_MISMATCHES:
-        print(f"  ⚠️  ShowMojo mismatches ({len(SM_MISMATCHES)}) — check address spelling:")
+        print(f"  ⚠️  ShowMojo mismatches ({len(SM_MISMATCHES)}):")
         for m in SM_MISMATCHES:
             print(f"    [{m['source']}] WE={m['we']} '{m['raw']}'")
     else:
         print("  ✅ All ShowMojo addresses matched to portfolio")
-
 except Exception as e:
     import traceback; traceback.print_exc()
     print(f"  WARNING [4f/7]: ShowMojo error: {e}")
     D2.setdefault('showmojo', {'by_ter_we':{},'by_ter_all':{},'active_ter':{},'mismatches':[]})
+
 
 print("[5/7] Reading HTML template...")
 if not os.path.exists(TEMPLATE_PATH):
