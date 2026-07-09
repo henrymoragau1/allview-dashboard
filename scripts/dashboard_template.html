@@ -422,7 +422,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <div class="kpi sky" style="padding:14px">
         <div class="klbl">Actual Showings</div>
         <div class="kval" id="sm-kpi-showings">—</div>
-        <div class="ksub">Lead→Show: <span id="sm-kpi-l2s" style="font-weight:700">—</span></div>
+        <div class="ksub">Sched→Show: <span id="sm-kpi-l2s" style="font-weight:700">—</span></div>
       </div>
       <div class="kpi sge" style="padding:14px">
         <div class="klbl">Applications</div>
@@ -2407,37 +2407,35 @@ function renderShowMojo() {
   var ALL_TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
   var ters = F.ters.length ? F.ters.filter(function(t){return ALL_TERS.indexOf(t)>=0;}) : ALL_TERS;
 
-  // Use WE-specific data if WE filter active, else all-time
-  var useWE = F.wes.length===1 ? F.wes[0] : null;
+  // Off-market data is cumulative (no WE breakdown) — always use by_ter_all
   function getD(ter) {
-    if (useWE && sm.by_ter_we[ter] && sm.by_ter_we[ter][useWE])
-      return sm.by_ter_we[ter][useWE];
-    return sm.by_ter_all[ter] || {leads:0,sched:0,actual:0,show_to_app_pct:null,apps_received:0,avg_dom:null,l2s_pct:null,listings:0};
+    return (sm.by_ter_all || {})[ter] || {leads:0,sched:0,actual:0,s2s_pct:null,
+      show_to_app_pct:null,apps_received:0,avg_dom:null,l2s_pct:null,listings:0};
   }
 
   // ── KPIs ─────────────────────────────────────────────────────────────────
-  var totLeads=0, totActual=0, totApps=0, domArr=[], actConvArr=[];
+  var totLeads=0, totSched=0, totActual=0, totApps=0, domArr=[];
   ters.forEach(function(t){
     var d=getD(t);
     totLeads  += d.leads||0;
+    totSched  += d.sched||0;
     totActual += d.actual||0;
     totApps   += d.apps_received||0;
-    if (d.avg_dom)          domArr.push(d.avg_dom);
-    if (d.show_to_app_pct)  actConvArr.push(d.show_to_app_pct);
+    if (d.avg_dom) domArr.push(d.avg_dom);
   });
-  var l2s = totLeads  > 0 ? Math.round(totActual/totLeads*1000)/10  : null;
-  var s2a = totActual > 0 ? Math.round(totApps/totActual*1000)/10   : null;
-  var dom = domArr.length ? Math.round(domArr.reduce(function(s,v){return s+v;},0)/domArr.length*10)/10 : null;
+  var s2s_tot = totSched  > 0 ? Math.round(totActual/totSched*100*10)/10  : null;
+  var s2a_tot = totActual > 0 ? Math.round(totApps/totActual*100*10)/10   : null;
+  var dom_avg = domArr.length ? Math.round(domArr.reduce(function(a,b){return a+b;},0)/domArr.length*10)/10 : null;
 
   function setT(id,v){var el=document.getElementById(id);if(el)el.textContent=v!=null?v:'—';}
   setT('sm-kpi-leads',    totLeads.toLocaleString());
   setT('sm-kpi-showings', totActual.toLocaleString());
   setT('sm-kpi-apps',     totApps.toLocaleString());
-  setT('sm-kpi-dom',      dom!=null ? dom+'d' : '—');
-  setT('sm-kpi-l2s',      l2s!=null ? l2s+'%' : '—');
-  setT('sm-kpi-s2a',      s2a!=null ? s2a+'%' : '—');
+  setT('sm-kpi-dom',      dom_avg!=null ? dom_avg+'d' : '—');
+  setT('sm-kpi-l2s',      s2s_tot!=null ? s2s_tot+'%' : '—');
+  setT('sm-kpi-s2a',      s2a_tot!=null ? s2a_tot+'%' : '—');
 
-  // ── Funnel chart ──────────────────────────────────────────────────────────
+  // ── Funnel chart: Leads / Sched / Actual / Apps per territory ───────────
   var leads   = ters.map(function(t){return getD(t).leads||0;});
   var sched   = ters.map(function(t){return getD(t).sched||0;});
   var actual  = ters.map(function(t){return getD(t).actual||0;});
@@ -2453,13 +2451,14 @@ function renderShowMojo() {
     scales:{x:{ticks:{font:{size:10}}},y:{beginAtZero:true,ticks:{font:{size:10}}}}
   });
 
-  // ── Conversion rate chart ─────────────────────────────────────────────────
+  // ── Conversion chart: Sched→Show % & Show→App % ──────────────────────────
   var s2sPcts = ters.map(function(t){
     var d=getD(t);
     return d.sched>0 ? Math.round(d.actual/d.sched*1000)/10 : 0;
   });
   var s2aPcts = ters.map(function(t){
     var d=getD(t);
+    // Show→App = Apps Received / Actual Showings
     return d.actual>0 && d.apps_received>0
       ? Math.round(d.apps_received/d.actual*1000)/10 : 0;
   });
@@ -2480,34 +2479,21 @@ function renderShowMojo() {
   if (!tbody) return;
   var TER_COLORS_SM={'North OC':'#2A7FBF','South OC':'#4B7C6F','SD Properties':'#7B58A6',
     'Commercial':'#D95C3A','STONE':'#4A4A4A','Elderkin':'#E07B39','Brenden':'#9EAAAD'};
-  var allListings = sm.active_listings || [];
+  var allListings = (sm.active_listings || []);
   var rows='';
-  var terIdx=0;
 
   ters.forEach(function(t) {
     var d=sm.active_ter[t];
     if (!d||!d.listings) return;
-
-    // Sched→Actual conversion (not Lead→Show)
     var s2s = d.sched>0 ? Math.round(d.actual/d.sched*1000)/10 : null;
-    var s2sColor = s2s==null ? 'var(--muted)' : s2s>=50?'#2E7D53': s2s>=25?'#B78A00':'#B93B2E';
-
-    var dot='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;'
-            +'background:'+(TER_COLORS_SM[t]||'#aaa')+';margin-right:6px;flex-shrink:0"></span>';
+    var s2sColor = s2s==null?'var(--muted)':s2s>=50?'#2E7D53':s2s>=25?'#B78A00':'#B93B2E';
+    var dot='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(TER_COLORS_SM[t]||'#aaa')+';margin-right:6px"></span>';
     var uid='sm-ter-'+t.replace(/\s+/g,'-');
+    var terListings = allListings.filter(function(l){return l.territory===t;});
 
-    // Territory summary row (collapsed by default)
-    rows+='<tr id="'+uid+'-hdr" style="background:#F0EDE8;cursor:pointer;user-select:none" '+
-          'onclick="(function(){var b=document.getElementById(''+uid+'-body');'+
-          'var ic=document.getElementById(''+uid+'-ic');'+
-          'if(!b)return;'+
-          'var open=b.style.display!=='none';'+
-          'b.style.display=open?'none':'table-row-group';'+
-          'ic.textContent=open?'+':'-';'+
-          '})()">'+
-      '<td style="padding:8px 12px;font-weight:700;display:flex;align-items:center;gap:6px">'+
-        '<span id="'+uid+'-ic" style="font-size:14px;font-weight:700;color:var(--muted);'+
-          'width:16px;text-align:center;flex-shrink:0">+</span>'+
+    rows+='<tr class="sm-ter-hdr" data-uid="'+uid+'" style="background:#F0EDE8;cursor:pointer;user-select:none">'+
+      '<td style="padding:8px 12px;font-weight:700">'+
+        '<span id="'+uid+'-ic" style="display:inline-block;width:16px;font-size:13px;font-weight:700;color:var(--muted)">+</span>'+
         dot+t+
       '</td>'+
       '<td style="text-align:center;padding:8px 12px;font-weight:600">'+d.listings+'</td>'+
@@ -2519,34 +2505,35 @@ function renderShowMojo() {
       '<td style="text-align:center;padding:8px 12px">'+(d.avg_dom?d.avg_dom+'d':'—')+'</td>'+
     '</tr>';
 
-    // Per-listing detail rows (hidden by default)
-    var terListings = allListings.filter(function(l){return l.territory===t;});
-    rows+='<tbody id="'+uid+'-body" style="display:none">';
-    if (terListings.length===0) {
-      rows+='<tr><td colspan="7" style="padding:6px 28px;color:var(--muted);font-style:italic;font-size:11px">No detail available</td></tr>';
-    } else {
-      terListings.forEach(function(l,li) {
-        var ls2s = l.sched>0 ? Math.round(l.actual/l.sched*1000)/10 : null;
-        var ls2sC = ls2s==null?'var(--muted)':ls2s>=50?'#2E7D53':ls2s>=25?'#B78A00':'#B93B2E';
-        var lbg = li%2===0 ? '#FAFAF7' : '#F5F3EE';
-        rows+='<tr style="background:'+lbg+'">'+
-          '<td style="padding:5px 12px 5px 36px;font-size:11px;color:#444">'+l.address+'</td>'+
-          '<td style="text-align:center;padding:5px 12px;font-size:11px;color:var(--muted)">—</td>'+
-          '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.leads+'</td>'+
-          '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.sched+'</td>'+
-          '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.actual+'</td>'+
-          '<td style="text-align:center;padding:5px 12px;font-size:11px;font-weight:600;color:'+ls2sC+'">'+
-            (ls2s!=null?ls2s+'%':'—')+'</td>'+
-          '<td style="text-align:center;padding:5px 12px;font-size:11px">'+
-            (l.dom?l.dom+'d':'—')+'</td>'+
-        '</tr>';
-      });
-    }
-    rows+='</tbody>';
-    terIdx++;
+    terListings.forEach(function(l,li) {
+      var ls2s = l.sched>0 ? Math.round(l.actual/l.sched*1000)/10 : null;
+      var ls2sC = ls2s==null?'var(--muted)':ls2s>=50?'#2E7D53':ls2s>=25?'#B78A00':'#B93B2E';
+      var lbg = li%2===0?'#FAFAF7':'#F5F3EE';
+      rows+='<tr class="sm-detail-'+uid+'" style="display:none;background:'+lbg+'">'+
+        '<td style="padding:5px 12px 5px 36px;font-size:11px;color:#444">'+l.address+'</td>'+
+        '<td style="text-align:center;padding:5px 12px;font-size:11px;color:var(--muted)">—</td>'+
+        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.leads+'</td>'+
+        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.sched+'</td>'+
+        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.actual+'</td>'+
+        '<td style="text-align:center;padding:5px 12px;font-size:11px;font-weight:600;color:'+ls2sC+'">'+
+          (ls2s!=null?ls2s+'%':'—')+'</td>'+
+        '<td style="text-align:center;padding:5px 12px;font-size:11px">'+(l.dom?l.dom+'d':'—')+'</td>'+
+      '</tr>';
+    });
   });
 
   tbody.innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No active listings</td></tr>';
+
+  tbody.querySelectorAll('.sm-ter-hdr').forEach(function(hdr) {
+    hdr.addEventListener('click', function() {
+      var uid = hdr.getAttribute('data-uid');
+      var ic  = document.getElementById(uid+'-ic');
+      var details = tbody.querySelectorAll('.sm-detail-'+uid);
+      var isOpen = ic && ic.textContent === '-';
+      details.forEach(function(r){ r.style.display = isOpen ? 'none' : ''; });
+      if (ic) ic.textContent = isOpen ? '+' : '-';
+    });
+  });
 }
 
 // ── TAB SWITCHING ─────────────────────────────────────
