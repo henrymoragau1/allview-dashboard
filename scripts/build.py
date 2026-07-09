@@ -33,6 +33,8 @@ FILES = {
     'phone':        os.path.join(DATA_DIR, 'Phone_Reporting.xlsx'),
     'term':         os.path.join(DATA_DIR, 'property_directory-Term.xlsx'),
     'guest_card':   os.path.join(DATA_DIR, 'guest_card_inquiries-Performance.xlsx'),
+    'sm_active':    os.path.join(DATA_DIR, 'Active_Listings_-_Performance.xlsx'),
+    'sm_offmkt':    os.path.join(DATA_DIR, 'Off_Market_Listings_-_Performance__Historical_Data_.xlsx'),
 }
 
 missing = [k for k,v in FILES.items() if not os.path.exists(v)]
@@ -319,7 +321,14 @@ for r in vac_rate[1:]:
         vac_donut2[f"eom:|{month}"][ter]+=1
         vac_donut2["eom:|||"][ter]+=1
 D2['vac_donut2']={k:dict(v) for k,v in vac_donut2.items()}
-D2['latest_we']=latest_vac_we.strftime('%Y-%m-%d')
+# Validate latest_we: must have full portfolio data (>100 units in port_counts)
+_latest_we_str=latest_vac_we.strftime('%Y-%m-%d')
+# If the latest vacancy WE has no matching portfolio data, step back to prior WE
+_valid_we_keys=[k.replace('we:','') for k,v in D2.get('port_counts',{}).items()
+                if k.startswith('we:') and sum(v.values())>100]
+if _latest_we_str not in _valid_we_keys and _valid_we_keys:
+    _latest_we_str=sorted(_valid_we_keys)[-1]
+D2['latest_we']=_latest_we_str
 
 # Portfolio counts
 port_eom=eom_we_map(port_rows,12,11,13)
@@ -1064,6 +1073,127 @@ except Exception as e:
   D2.setdefault('churn',[])
   D2.setdefault('port_by_ter_current',{})
   D2.setdefault('port_latest_we','')
+
+
+# ── SHOWMOJO: Leads → Showings funnel ────────────────────────────────────────
+print("[4f/7] Computing ShowMojo leads/showings data...")
+try:
+    import re as _re
+
+    def _parse_offmkt_addr(raw):
+        raw = str(raw).strip()
+        raw = _re.sub(r'\s+-\s+\d+\s+bed.*$',  '', raw, flags=_re.IGNORECASE).strip()
+        raw = _re.sub(r'\s+-\s+Studio.*$',       '', raw, flags=_re.IGNORECASE).strip()
+        raw = _re.sub(r',\s*\d+\s+(full|half).*$','', raw, flags=_re.IGNORECASE).strip()
+        return raw.rstrip(' -').strip()
+
+    def _parse_active_addr(raw):
+        raw = str(raw).strip()
+        parts = raw.split(',')
+        if len(parts) >= 3:
+            street = _re.sub(r'\s+-\s+[^,]+$', '', parts[0].strip()).strip()
+            city = parts[1].strip(); state = parts[2].strip()
+            zipcode = parts[3].strip() if len(parts) > 3 else ''
+            return f"{street} {city}, {state} {zipcode}".strip(), parts[0].strip()
+        return raw, raw
+
+    def _sm_resolve(parsed):
+        if parsed in master_map: return master_map[parsed]
+        norm = _re.sub(r'[^a-z0-9]','', parsed.lower())
+        if norm in master_norm: return master_norm[norm]
+        parts = parsed.split()
+        if parts:
+            num = parts[0]
+            snu = _re.sub(r'\s*-\s*[a-z0-9/]+\s*$', '', parsed.lower()).strip()
+            for addr, attrs in master_map.items():
+                if addr.startswith(num+' ') or addr.startswith(num+'-'):
+                    if snu[:20] in addr.lower() or addr.lower()[:20] in snu:
+                        return attrs
+        return None
+
+    sm_active_rows  = read_sheet(FILES['sm_active'])
+    sm_offmkt_rows  = read_sheet(FILES['sm_offmkt'])
+
+    # By territory + WE: leads, scheduled showings, actual showings, days on market
+    sm_by_ter_we  = defaultdict(lambda: defaultdict(lambda:{
+        'leads':0,'sched':0,'actual':0,'dom':[],'listings':0}))
+    # All-time by territory
+    sm_by_ter_all = defaultdict(lambda:{
+        'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
+    # Current active snapshot (all at same WE)
+    sm_active_ter = defaultdict(lambda:{
+        'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
+
+    SM_MISMATCHES = []
+
+    # Off-market (historical, has WE column)
+    for r in sm_offmkt_rows[1:]:
+        if not r or not r[0]: continue
+        parsed = _parse_offmkt_addr(str(r[0]))
+        attrs  = _sm_resolve(parsed)
+        we_raw = r[10]
+        we_str = we_raw.strftime('%Y-%m-%d') if hasattr(we_raw,'strftime') else str(we_raw)[:10]
+        if not attrs or not attrs.get('territory') or attrs['territory'] in SKIP_TERS:
+            SM_MISMATCHES.append({'source':'off_market','raw':str(r[0]),'parsed':parsed,'we':we_str})
+            continue
+        ter    = attrs['territory']
+        leads  = int(r[1]) if isinstance(r[1],(int,float)) else 0
+        sched  = int(r[2]) if isinstance(r[2],(int,float)) else 0
+        actual = int(r[3]) if isinstance(r[3],(int,float)) else 0
+        dom    = float(r[7]) if isinstance(r[7],(int,float)) and r[7]>0 else 0
+        for d in [sm_by_ter_we[ter][we_str], sm_by_ter_all[ter]]:
+            d['leads']    += leads; d['sched']    += sched
+            d['actual']   += actual; d['listings'] += 1
+            if dom > 0: d['dom'].append(dom)
+
+    # Active listings (current snapshot)
+    for r in sm_active_rows[1:]:
+        if not r or not r[0]: continue
+        raw = str(r[0]).strip()
+        p1, p2 = _parse_active_addr(raw)
+        attrs  = _sm_resolve(p1) or _sm_resolve(p2)
+        we_raw = r[14]
+        we_str = we_raw.strftime('%Y-%m-%d') if hasattr(we_raw,'strftime') else str(we_raw)[:10]
+        if not attrs or not attrs.get('territory') or attrs['territory'] in SKIP_TERS:
+            SM_MISMATCHES.append({'source':'active','raw':raw,'parsed':p1,'we':we_str})
+            continue
+        ter    = attrs['territory']
+        leads  = int(r[3]) if isinstance(r[3],(int,float)) else 0
+        sched  = int(r[2]) if isinstance(r[2],(int,float)) else 0
+        actual = int(r[1]) if isinstance(r[1],(int,float)) else 0
+        dom    = int(r[4]) if isinstance(r[4],(int,float)) else 0
+        d = sm_active_ter[ter]
+        d['leads']  += leads; d['sched']  += sched
+        d['actual'] += actual; d['listings'] += 1
+        if dom > 0: d['dom'].append(dom)
+
+    # Serialize (convert dom lists to avg)
+    def _sm_finalize(d):
+        avg_dom = round(sum(d['dom'])/len(d['dom']),1) if d['dom'] else None
+        l2s = round(d['actual']/d['leads']*100,1) if d['leads'] > 0 else None
+        return {'leads':d['leads'],'sched':d['sched'],'actual':d['actual'],
+                'avg_dom':avg_dom,'l2s_pct':l2s,'listings':d['listings']}
+
+    D2['showmojo'] = {
+        'by_ter_we':  {ter:{we:_sm_finalize(d) for we,d in wes.items()}
+                       for ter,wes in sm_by_ter_we.items()},
+        'by_ter_all': {ter:_sm_finalize(d) for ter,d in sm_by_ter_all.items()},
+        'active_ter': {ter:_sm_finalize(d) for ter,d in sm_active_ter.items()},
+        'mismatches': SM_MISMATCHES,
+    }
+    print(f"  ShowMojo: {sum(d['listings'] for d in sm_by_ter_all.values())} off-mkt + "
+          f"{sum(d['listings'] for d in sm_active_ter.values())} active listings mapped")
+    if SM_MISMATCHES:
+        print(f"  ⚠️  ShowMojo mismatches ({len(SM_MISMATCHES)}) — check address spelling:")
+        for m in SM_MISMATCHES:
+            print(f"    [{m['source']}] WE={m['we']} '{m['raw']}'")
+    else:
+        print("  ✅ All ShowMojo addresses matched to portfolio")
+
+except Exception as e:
+    import traceback; traceback.print_exc()
+    print(f"  WARNING [4f/7]: ShowMojo error: {e}")
+    D2.setdefault('showmojo', {'by_ter_we':{},'by_ter_all':{},'active_ter':{},'mismatches':[]})
 
 print("[5/7] Reading HTML template...")
 if not os.path.exists(TEMPLATE_PATH):
