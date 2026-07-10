@@ -457,13 +457,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <div style="overflow-x:auto">
         <table class="dt">
           <thead><tr>
-            <th>Territory</th>
+            <th colspan="2">Leasing Agent / Property</th>
             <th style="text-align:center">Listings</th>
             <th style="text-align:right">Leads</th>
             <th style="text-align:right">Sched</th>
             <th style="text-align:right">Actual</th>
             <th style="text-align:center">Sched→Show %</th>
-            <th style="text-align:center">Avg Days Listed</th>
+            <th style="text-align:center">Days on Market</th>
           </tr></thead>
           <tbody id="sm-active-tbody"></tbody>
         </table>
@@ -2474,66 +2474,82 @@ function renderShowMojo() {
     }
   });
 
-  // ── Active listings table with expand/collapse ────────────────────────────
+  // ── Active listings: grouped by Leasing Agent (level 1) → Properties (level 2) ──
   var tbody=document.getElementById('sm-active-tbody');
   if (!tbody) return;
   var TER_COLORS_SM={'North OC':'#2A7FBF','South OC':'#4B7C6F','SD Properties':'#7B58A6',
     'Commercial':'#D95C3A','STONE':'#4A4A4A','Elderkin':'#E07B39','Brenden':'#9EAAAD'};
   var allListings = (sm.active_listings || []);
+
+  // Filter by territory if set
+  var filtListings = F.ters.length
+    ? allListings.filter(function(l){ return F.ters.indexOf(l.territory) >= 0; })
+    : allListings;
+
+  // Group by leasing agent
+  var agentMap = {};
+  filtListings.forEach(function(l) {
+    var ag = l.la || 'Unassigned';
+    if (!agentMap[ag]) agentMap[ag] = {leads:0,sched:0,actual:0,dom:[],listings:[]};
+    agentMap[ag].leads  += l.leads||0;
+    agentMap[ag].sched  += l.sched||0;
+    agentMap[ag].actual += l.actual||0;
+    agentMap[ag].listings.push(l);
+    if (l.dom) agentMap[ag].dom.push(l.dom);
+  });
+
   var rows='';
 
-  ters.forEach(function(t) {
-    var d=sm.active_ter[t];
-    if (!d||!d.listings) return;
-    var s2s = d.sched>0 ? Math.round(d.actual/d.sched*1000)/10 : null;
-    var s2sColor = s2s==null?'var(--muted)':s2s>=50?'#2E7D53':s2s>=25?'#B78A00':'#B93B2E';
-    var dot='<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(TER_COLORS_SM[t]||'#aaa')+';margin-right:6px"></span>';
-    var uid='sm-ter-'+t.replace(/\s+/g,'-');
-    var terListings = allListings.filter(function(l){return l.territory===t;});
+  if (!filtListings.length) {
+    rows='<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:16px">No active listings</td></tr>';
+  } else {
+    Object.keys(agentMap).sort().forEach(function(agent) {
+      var ag = agentMap[agent];
+      var agUid = 'sm-ag-'+agent.replace(/[^a-z0-9]/gi,'-');
+      var s2s_ag = ag.sched>0 ? Math.round(ag.actual/ag.sched*1000)/10 : null;
+      var avgDom = ag.dom.length ? Math.round(ag.dom.reduce(function(a,b){return a+b;},0)/ag.dom.length*10)/10 : null;
+      var s2sC_ag = s2s_ag==null?'var(--muted)':s2s_ag>=50?'#2E7D53':s2s_ag>=25?'#B78A00':'#B93B2E';
 
-    rows+='<tr class="sm-ter-hdr" data-uid="'+uid+'" style="background:#F0EDE8;cursor:pointer;user-select:none">'+
-      '<td style="padding:8px 12px;font-weight:700">'+
-        '<span id="'+uid+'-ic" style="display:inline-block;width:16px;font-size:13px;font-weight:700;color:var(--muted)">+</span>'+
-        dot+t+
-      '</td>'+
-      '<td style="text-align:center;padding:8px 12px;font-weight:600">'+d.listings+'</td>'+
-      '<td style="text-align:right;padding:8px 12px">'+d.leads.toLocaleString()+'</td>'+
-      '<td style="text-align:right;padding:8px 12px">'+d.sched.toLocaleString()+'</td>'+
-      '<td style="text-align:right;padding:8px 12px">'+d.actual.toLocaleString()+'</td>'+
-      '<td style="text-align:center;padding:8px 12px;font-weight:700;color:'+s2sColor+'">'+
-        (s2s!=null?s2s+'%':'—')+'</td>'+
-      '<td style="text-align:center;padding:8px 12px">'+(d.avg_dom?d.avg_dom+'d':'—')+'</td>'+
-    '</tr>';
-
-    terListings.forEach(function(l,li) {
-      var ls2s = l.sched>0 ? Math.round(l.actual/l.sched*1000)/10 : null;
-      var ls2sC = ls2s==null?'var(--muted)':ls2s>=50?'#2E7D53':ls2s>=25?'#B78A00':'#B93B2E';
-      var lbg = li%2===0?'#FAFAF7':'#F5F3EE';
-      rows+='<tr class="sm-detail-'+uid+'" style="display:none;background:'+lbg+'">'+
-        '<td style="padding:5px 12px 5px 36px;font-size:11px;color:#444">'+l.address+'</td>'+
-        '<td style="text-align:center;padding:5px 12px;font-size:11px;color:var(--muted)">—</td>'+
-        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.leads+'</td>'+
-        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.sched+'</td>'+
-        '<td style="text-align:right;padding:5px 12px;font-size:11px">'+l.actual+'</td>'+
-        '<td style="text-align:center;padding:5px 12px;font-size:11px;font-weight:600;color:'+ls2sC+'">'+
-          (ls2s!=null?ls2s+'%':'—')+'</td>'+
-        '<td style="text-align:center;padding:5px 12px;font-size:11px">'+(l.dom?l.dom+'d':'—')+'</td>'+
+      // ── Level 1: Leasing Agent header row ──────────────────────────────────
+      rows+='<tr class="sm-ag-hdr" data-uid="'+agUid+'" style="background:#E8E4DC;cursor:pointer;user-select:none">'+
+        '<td style="padding:9px 12px;font-weight:700;font-size:12px" colspan="2">'+
+          '<span id="'+agUid+'-ic" style="display:inline-block;width:16px;font-size:13px;font-weight:700;color:var(--muted)">+</span>'+
+          '&#128100; '+agent+
+        '</td>'+
+        '<td style="text-align:center;padding:9px 12px;font-weight:600;font-size:12px">'+ag.listings.length+'</td>'+
+        '<td style="text-align:right;padding:9px 12px;font-size:12px">'+ag.leads.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:9px 12px;font-size:12px">'+ag.sched.toLocaleString()+'</td>'+
+        '<td style="text-align:right;padding:9px 12px;font-size:12px">'+ag.actual.toLocaleString()+'</td>'+
+        '<td style="text-align:center;padding:9px 12px;font-weight:700;font-size:12px;color:'+s2sC_ag+'">'+
+          (s2s_ag!=null?s2s_ag+'%':'—')+'</td>'+
+        '<td style="text-align:center;padding:9px 12px;font-size:12px">'+
+          (avgDom?avgDom+'d':'—')+'</td>'+
       '</tr>';
-    });
-  });
 
-  tbody.innerHTML=rows||'<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:16px">No active listings</td></tr>';
-
-  tbody.querySelectorAll('.sm-ter-hdr').forEach(function(hdr) {
-    hdr.addEventListener('click', function() {
-      var uid = hdr.getAttribute('data-uid');
-      var ic  = document.getElementById(uid+'-ic');
-      var details = tbody.querySelectorAll('.sm-detail-'+uid);
-      var isOpen = ic && ic.textContent === '-';
-      details.forEach(function(r){ r.style.display = isOpen ? 'none' : ''; });
-      if (ic) ic.textContent = isOpen ? '+' : '-';
+      // ── Level 2: Property rows (hidden by default) ─────────────────────────
+      ag.listings.forEach(function(l, li) {
+        var ls2s = l.sched>0 ? Math.round(l.actual/l.sched*1000)/10 : null;
+        var ls2sC = ls2s==null?'var(--muted)':ls2s>=50?'#2E7D53':ls2s>=25?'#B78A00':'#B93B2E';
+        var lbg = li%2===0?'#F5F3EE':'#FAFAF8';
+        var dot='<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+(TER_COLORS_SM[l.territory]||'#aaa')+';margin-right:5px;flex-shrink:0"></span>';
+        rows+='<tr class="sm-detail-'+agUid+'" style="display:none;background:'+lbg+'">'+
+          '<td style="padding:6px 12px 6px 36px;font-size:11px;color:#333" colspan="2">'+dot+l.address+'</td>'+
+          '<td style="text-align:center;padding:6px 12px;font-size:10px;color:var(--muted)">'+l.territory+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;font-size:11px">'+l.leads+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;font-size:11px">'+l.sched+'</td>'+
+          '<td style="text-align:right;padding:6px 12px;font-size:11px">'+l.actual+'</td>'+
+          '<td style="text-align:center;padding:6px 12px;font-size:11px;font-weight:600;color:'+ls2sC+'">'+
+            (ls2s!=null?ls2s+'%':'—')+'</td>'+
+          '<td style="text-align:center;padding:6px 12px;font-size:11px">'+(l.dom?l.dom+'d':'—')+'</td>'+
+        '</tr>';
+      });
     });
-  });
+  }
+
+  tbody.innerHTML = rows;
+
+  // Attach expand/collapse handlers after tbody is populated
+  // Event delegation registered at boot (see window.addEventListener below)
 }
 
 // ── TAB SWITCHING ─────────────────────────────────────
@@ -2666,6 +2682,27 @@ window.addEventListener('load', function() {
   render();
   renderStatic();
   renderShowMojo();
+
+  // ── ShowMojo expand/collapse: registered once at boot on document ────────
+  document.addEventListener('click', function(e) {
+    // Find the closest sm-ag-hdr ancestor
+    var hdr = null;
+    var el = e.target;
+    while (el && el.tagName) {
+      if (el.classList && el.classList.contains('sm-ag-hdr')) { hdr = el; break; }
+      el = el.parentNode;
+    }
+    if (!hdr) return;
+    var uid     = hdr.getAttribute('data-uid');
+    if (!uid) return;
+    var ic      = document.getElementById(uid + '-ic');
+    var tbody   = document.getElementById('sm-active-tbody');
+    if (!tbody) return;
+    var details = tbody.querySelectorAll('.sm-detail-' + uid);
+    var isOpen  = ic && ic.textContent === '-';
+    details.forEach(function(row) { row.style.display = isOpen ? 'none' : ''; });
+    if (ic) ic.textContent = isOpen ? '+' : '-';
+  });
   renderShowMojo();
   renderScorecard();
   renderEOS();
