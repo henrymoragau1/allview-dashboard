@@ -1154,6 +1154,7 @@ try:
         sm_addrs_by_ter[ter].add(canon)
 
     # ── Active listings: current snapshot ────────────────────────────────────
+    SKIP_LA_SM = {'TBD','TBD_Leasing Agent','Commercial',''}
     sm_active_ter      = defaultdict(lambda:{'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
     sm_active_listings = []
 
@@ -1168,6 +1169,10 @@ try:
             SM_MISMATCHES.append({'source':'active','raw':raw,'parsed':p1,'we':we_str})
             continue
         ter    = attrs['territory']
+        # Leasing agent: portfolio col 7 first, fallback to ShowMojo col 5
+        la_port = attrs.get('la','')
+        la_sm_r = str(r[5]).strip() if r[5] and str(r[5]).strip() not in ('None','nan','Multiple') else ''
+        la = la_port if la_port and la_port not in SKIP_LA_SM else la_sm_r if la_sm_r else 'Unassigned'
         leads  = int(r[3]) if isinstance(r[3],(int,float)) else 0
         sched  = int(r[2]) if isinstance(r[2],(int,float)) else 0
         actual = int(r[1]) if isinstance(r[1],(int,float)) else 0
@@ -1177,9 +1182,9 @@ try:
         if dom>0: d['dom'].append(dom)
         disp_addr = re.sub(r',\s*[A-Z]{2},\s*\d{5}.*$','',p1).strip()
         s2s_a = round(actual/sched*100,1) if sched>0 else None
-        sm_active_listings.append({'address':disp_addr,'territory':ter,
+        sm_active_listings.append({'address':disp_addr,'territory':ter,'la':la,
             'leads':leads,'sched':sched,'actual':actual,'dom':dom,'s2s_pct':s2s_a})
-    sm_active_listings.sort(key=lambda x:(x['territory'],-x['leads']))
+    sm_active_listings.sort(key=lambda x:(x['la'],x['territory'],-x['leads']))
 
     # ── Apps received for ShowMojo-tracked properties ─────────────────────────
     # Show→App % = Apps Received (all statuses) / Actual Showings
