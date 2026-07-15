@@ -1153,6 +1153,41 @@ try:
         if dom>0: d['dom'].append(dom)
         sm_addrs_by_ter[ter].add(canon)
 
+    # ── Unit Turn lookup: (property+unit) → turn days ──────────────────────
+    # Reads sheet 'Unit Turn Details', col A=property, col B=unit, col R=days to complete
+    # Matches active listings by property name + unit (exact, case-insensitive)
+    # Last row per (property, unit) pair wins (most recent turn)
+    _ut_wb = openpyxl.load_workbook(FILES['unit_turn'], read_only=True, data_only=True)
+    _ut_ws = _ut_wb['Unit Turn Details']
+    _ut_rows = list(_ut_ws.iter_rows(values_only=True))
+    _ut_wb.close()
+
+    ut_lookup = {}  # (prop_lower, unit_lower) → days
+    for _r in _ut_rows[1:]:
+        if not _r or not _r[0]: continue
+        _days = _r[17]  # col R = 'Days to complete'
+        if not isinstance(_days, (int, float)): continue
+        _days = int(_days)
+        _prop = str(_r[0]).strip().lower()
+        _unit = str(_r[1]).strip().lower() if _r[1] else ''
+        ut_lookup[(_prop, _unit)] = _days  # last row per property+unit wins
+    print(f"  Unit Turn lookup: {len(ut_lookup)} property+unit entries loaded")
+
+    # Manual overrides for entries confirmed by user but not yet in uploaded file
+    # These will be superseded once the updated Unit_Turn_Details.xlsx is uploaded
+    MANUAL_UT = {
+        ('130 e 17th st',          'm'):  4,   # row 262 - user renamed from "The Row"
+        ('202 east 16th street',   '2'):  None, # row 267 - in user's local file, days unknown
+        ('3864 35th street',       '07'): None, # row 282 - in user's local file, days unknown
+    }
+    for _k, _d in MANUAL_UT.items():
+        if _d is not None:
+            ut_lookup[_k] = _d
+
+    # Remove 0-day entries (means turn not yet completed)
+    ut_lookup = {k:v for k,v in ut_lookup.items() if v and v > 0}
+    print(f"  Unit Turn lookup after filtering: {len(ut_lookup)} valid entries")
+
     # ── Active listings: current snapshot ────────────────────────────────────
     SKIP_LA_SM = {'TBD','TBD_Leasing Agent','Commercial',''}
     sm_active_ter      = defaultdict(lambda:{'leads':0,'sched':0,'actual':0,'dom':[],'listings':0})
@@ -1182,8 +1217,24 @@ try:
         if dom>0: d['dom'].append(dom)
         disp_addr = re.sub(r',\s*[A-Z]{2},\s*\d{5}.*$','',p1).strip()
         s2s_a = round(actual/sched*100,1) if sched>0 else None
+        # Match Unit Turn: exact (property, unit) lookup
+        # p1 = "130 E 17th St Costa Mesa, CA 92627", p2 = "130 E 17th St - M"
+        _street_with_unit = raw.split(',')[0].strip()  # "130 E 17th St - M"
+        _um = re.search(r'\s+-\s+([^,]+)$', _street_with_unit)
+        _unit_key = _um.group(1).strip().lower() if _um else ''
+        _prop_key = re.sub(r'\s+-\s+[^,]+$','',_street_with_unit).strip().lower()
+        turn_days = ut_lookup.get((_prop_key, _unit_key))
+        # Fallback: try property name without city portion matched to full unit col B
+        if turn_days is None:
+            for (_pk, _uk), _d in ut_lookup.items():
+                if _pk == _prop_key:
+                    # unit col B may contain the full address (e.g. '24911 luton street')
+                    if _uk == _prop_key or _uk.startswith(_prop_key[:10]):
+                        turn_days = _d; break
+        dwr = dom + turn_days if turn_days is not None and dom else None
         sm_active_listings.append({'address':disp_addr,'territory':ter,'la':la,
-            'leads':leads,'sched':sched,'actual':actual,'dom':dom,'s2s_pct':s2s_a})
+            'leads':leads,'sched':sched,'actual':actual,'dom':dom,'s2s_pct':s2s_a,
+            'turn_days':turn_days,'dwr':dwr})
     sm_active_listings.sort(key=lambda x:(x['la'],x['territory'],-x['leads']))
 
     # ── Apps received for ShowMojo-tracked properties ─────────────────────────
