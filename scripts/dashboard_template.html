@@ -364,9 +364,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <div id="nps-bars-ov"></div>
     </div>
   </div>
-</div>
 
-  <!-- ShowMojo Summary — Overview Tab -->
+  <!-- ShowMojo: Leasing Funnel Summary -->
   <div style="margin-top:20px">
     <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
       <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
@@ -407,6 +406,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       </div>
     </div>
   </div>
+</div>
 <div class="page" id="leasing">
   <p class="ptitle">Leasing &amp; Vacancy</p>
   <p class="psub" id="sub-leasing">Rental applications, vacancy tracking, and lease renewals</p>
@@ -442,11 +442,72 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <div class="cw"><canvas id="c-ut"></canvas></div>
     </div>
   </div>
-</div>
-
 
 
   <!-- ShowMojo Leasing Funnel -->
+  <div style="margin-top:20px">
+    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+      <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
+      <p style="font-size:12px;color:var(--muted);margin:0">ShowMojo · Leads → Showings → Applications</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+      <div class="kpi" style="padding:14px">
+        <div class="klbl">Total Leads</div>
+        <div class="kval" id="sm-kpi-leads">—</div>
+        <div class="ksub">Inquiries received</div>
+      </div>
+      <div class="kpi sky" style="padding:14px">
+        <div class="klbl">Actual Showings</div>
+        <div class="kval" id="sm-kpi-showings">—</div>
+        <div class="ksub">Sched→Show: <span id="sm-kpi-l2s" style="font-weight:700">—</span></div>
+      </div>
+      <div class="kpi sge" style="padding:14px">
+        <div class="klbl">Applications</div>
+        <div class="kval" id="sm-kpi-apps">—</div>
+        <div class="ksub">Show→App: <span id="sm-kpi-s2a" style="font-weight:700">—</span></div>
+      </div>
+      <div class="kpi gld" style="padding:14px">
+        <div class="klbl">Avg Days on Market</div>
+        <div class="kval" id="sm-kpi-dom">—</div>
+        <div class="ksub">Until leased</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
+      <div class="card">
+        <p class="ctitle">Leads → Showings → Apps by Territory</p>
+        <p class="csub">Historical off-market listings</p>
+        <canvas id="c-sm-funnel" height="200"></canvas>
+      </div>
+      <div class="card">
+        <p class="ctitle">Conversion Rates by Territory</p>
+        <p class="csub">Sched→Show % &amp; Show→App %</p>
+        <canvas id="c-sm-conv" height="200"></canvas>
+      </div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Active Listings — Live Pipeline</p>
+      <p class="csub">Currently on market · ShowMojo data as of latest WE</p>
+      <div style="overflow-x:auto">
+        <table class="dt">
+          <thead><tr>
+            <th colspan="2">Leasing Agent / Property</th>
+            <th style="text-align:center">Listings</th>
+            <th style="text-align:right">Leads</th>
+            <th style="text-align:right">Sched</th>
+            <th style="text-align:right">Actual</th>
+            <th style="text-align:center">Sched→Show %</th>
+            <th style="text-align:center">Days on Market</th>
+            <th style="text-align:center">Turn Days</th>
+            <th style="text-align:center;background:#FEF3CD;font-weight:700">Days W/O Revenue</th>
+          </tr></thead>
+          <tbody id="sm-active-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+
+<!-- ShowMojo Leasing Funnel -->
   <div style="margin-top:20px">
     <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
       <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
@@ -513,6 +574,58 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       </div>
     </div>
   </div>
+</div>
+<div class="page" id="maintenance">
+  <p class="ptitle">Maintenance</p>
+  <p class="psub" id="sub-maintenance">Work order tracking · completion rates · top issues</p>
+  <div class="krow">
+    <div class="kpi sge" id="kpi-wo-completed">
+      <div class="klbl">Completed WOs</div>
+      <div class="kval">—</div>
+      <div class="ksub">—</div>
+    </div>
+    <div class="kpi cor" id="kpi-wo-open">
+      <div class="klbl">Open Work Orders</div>
+      <div class="kval">—</div>
+      <div class="ksub">Assigned / in progress</div>
+    </div>
+    <div class="kpi" id="kpi-wo-canceled">
+      <div class="klbl">Canceled</div>
+      <div class="kval">—</div>
+      <div class="ksub">Closed without action</div>
+    </div>
+    <div class="kpi gld" id="kpi-wo-nocharge">
+      <div class="klbl">No Charge</div>
+      <div class="kval">—</div>
+      <div class="ksub">Waived / warranty</div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Work Orders by Month</div>
+      <div class="csub">Created / Closed / Opened · by month</div>
+      <div class="cw"><canvas id="c-wo"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">WO Status Breakdown</div>
+      <div class="csub">Distribution of all work order statuses</div>
+      <div class="cw sh"><canvas id="c-wos"></canvas></div>
+      <div class="leg" id="wos-leg"></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ctitle">Top Work Order Issues</div>
+      <div class="csub">Most common issue categories</div>
+      <div class="cw"><canvas id="c-woi"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">WO Completion Time</div>
+      <div class="csub">Average days to complete by territory</div>
+      <div class="cw"><canvas id="c-wo-completion"></canvas></div>
+    </div>
+  </div>
+</div>
 <div class="page" id="satisfaction">
   <p class="ptitle">Owner NPS &amp; Reviews</p>
   <p class="psub" id="sub-satisfaction">Satisfaction tracking across territories and platforms</p>
@@ -2855,9 +2968,8 @@ window.addEventListener('load', function() {
     </div>
 
   </div>
-</div>
 
-  <!-- ShowMojo Summary — CEO Scorecard Tab -->
+  <!-- ShowMojo: Leasing Funnel Summary — CEO -->
   <div class="card" style="margin-top:20px">
     <p class="ctitle">Leasing Funnel</p>
     <p class="csub">ShowMojo · Leads → Showings → Applications</p>
@@ -2883,6 +2995,7 @@ window.addEventListener('load', function() {
     </div>
     <canvas id="c-ceo-sm-funnel" height="160"></canvas>
   </div>
+</div>
 <div class="page" id="churn">
   <p class="ptitle">Property Churn</p>
   <p class="psub">Lost properties · termination reasons and PM accountability</p>
