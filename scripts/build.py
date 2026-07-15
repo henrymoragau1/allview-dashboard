@@ -1173,20 +1173,10 @@ try:
         ut_lookup[(_prop, _unit)] = _days  # last row per property+unit wins
     print(f"  Unit Turn lookup: {len(ut_lookup)} property+unit entries loaded")
 
-    # Manual overrides for entries confirmed by user but not yet in uploaded file
-    # These will be superseded once the updated Unit_Turn_Details.xlsx is uploaded
-    MANUAL_UT = {
-        ('130 e 17th st',          'm'):  4,   # row 262 - user renamed from "The Row"
-        ('202 east 16th street',   '2'):  None, # row 267 - in user's local file, days unknown
-        ('3864 35th street',       '07'): None, # row 282 - in user's local file, days unknown
-    }
-    for _k, _d in MANUAL_UT.items():
-        if _d is not None:
-            ut_lookup[_k] = _d
-
-    # Remove 0-day entries (means turn not yet completed)
-    ut_lookup = {k:v for k,v in ut_lookup.items() if v and v > 0}
-    print(f"  Unit Turn lookup after filtering: {len(ut_lookup)} valid entries")
+    # Keep 0-day entries: unit listed while still occupied = valid data
+    # Only remove non-numeric entries
+    ut_lookup = {k:v for k,v in ut_lookup.items() if isinstance(v,(int,float))}
+    print(f"  Unit Turn lookup: {len(ut_lookup)} valid entries ({sum(1 for v in ut_lookup.values() if v==0)} with 0 days)")
 
     # ── Active listings: current snapshot ────────────────────────────────────
     SKIP_LA_SM = {'TBD','TBD_Leasing Agent','Commercial',''}
@@ -1228,10 +1218,18 @@ try:
         if turn_days is None:
             for (_pk, _uk), _d in ut_lookup.items():
                 if _pk == _prop_key:
-                    # unit col B may contain the full address (e.g. '24911 luton street')
+                    # Match cases:
+                    # 1. UT unit = full property name (self-referential, e.g. no unit)
                     if _uk == _prop_key or _uk.startswith(_prop_key[:10]):
                         turn_days = _d; break
-        dwr = dom + turn_days if turn_days is not None and dom else None
+                    # 2. Active unit has leading zero (e.g. '07' vs '7')
+                    if _unit_key.lstrip('0') and _uk == _unit_key.lstrip('0'):
+                        turn_days = _d; break
+                    # 3. Active has no unit, UT unit is empty or self-ref
+                    if not _unit_key and (not _uk or _uk == _prop_key):
+                        turn_days = _d; break
+        # turn_days=0 is valid (listed while occupied); include in DWR
+        dwr = dom + turn_days if turn_days is not None else None
         sm_active_listings.append({'address':disp_addr,'territory':ter,'la':la,
             'leads':leads,'sched':sched,'actual':actual,'dom':dom,'s2s_pct':s2s_a,
             'turn_days':turn_days,'dwr':dwr})
