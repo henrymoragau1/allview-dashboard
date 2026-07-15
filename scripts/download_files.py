@@ -53,7 +53,7 @@ FILE_LINKS = {
     'tenant_unpaid_charges_summary.xlsx':
         'https://1drv.ms/x/c/7e1a6235327bfe3a/IQB4rfITXlxzSpHkLVCF9at0AZsm6xUgWlVnveNu181MkHU?e=dIgxbH',
     'Unit_Turn_Details.xlsx':
-        'https://1drv.ms/x/c/7e1a6235327bfe3a/IQBG8HrtVhdBSYuDJ7e_nG6LAQfwiGUOFMVvlIHI-rUaa7s?e=BZ0LNK',
+        'https://1drv.ms/x/c/7e1a6235327bfe3a/IQBG8HrtVhdBSYuDJ7e_nG6LAQfwiGUOFMVvlIHI-rUaa7s?e=JH90MV',
     'WorkOrders_Report.xlsx':
         'https://1drv.ms/x/c/7e1a6235327bfe3a/IQDKMJxWJS8gTpZhbAc_MqBFAeHL9Q87yrA7wBq7uAx1QI8?e=7h9x6v',
     'Yelp-Google_Reviews.xlsx':
