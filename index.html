@@ -450,69 +450,6 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
       <p style="font-size:12px;color:var(--muted);margin:0">ShowMojo · Leads → Showings → Applications</p>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
-      <div class="kpi" style="padding:14px">
-        <div class="klbl">Total Leads</div>
-        <div class="kval" id="sm-kpi-leads">—</div>
-        <div class="ksub">Inquiries received</div>
-      </div>
-      <div class="kpi sky" style="padding:14px">
-        <div class="klbl">Actual Showings</div>
-        <div class="kval" id="sm-kpi-showings">—</div>
-        <div class="ksub">Sched→Show: <span id="sm-kpi-l2s" style="font-weight:700">—</span></div>
-      </div>
-      <div class="kpi sge" style="padding:14px">
-        <div class="klbl">Applications</div>
-        <div class="kval" id="sm-kpi-apps">—</div>
-        <div class="ksub">Show→App: <span id="sm-kpi-s2a" style="font-weight:700">—</span></div>
-      </div>
-      <div class="kpi gld" style="padding:14px">
-        <div class="klbl">Avg Days on Market</div>
-        <div class="kval" id="sm-kpi-dom">—</div>
-        <div class="ksub">Until leased</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:16px">
-      <div class="card">
-        <p class="ctitle">Leads → Showings → Apps by Territory</p>
-        <p class="csub">Historical off-market listings</p>
-        <canvas id="c-sm-funnel" height="200"></canvas>
-      </div>
-      <div class="card">
-        <p class="ctitle">Conversion Rates by Territory</p>
-        <p class="csub">Sched→Show % &amp; Show→App %</p>
-        <canvas id="c-sm-conv" height="200"></canvas>
-      </div>
-    </div>
-    <div class="card">
-      <p class="ctitle">Active Listings — Live Pipeline</p>
-      <p class="csub">Currently on market · ShowMojo data as of latest WE</p>
-      <div style="overflow-x:auto">
-        <table class="dt">
-          <thead><tr>
-            <th colspan="2">Leasing Agent / Property</th>
-            <th style="text-align:center">Listings</th>
-            <th style="text-align:right">Leads</th>
-            <th style="text-align:right">Sched</th>
-            <th style="text-align:right">Actual</th>
-            <th style="text-align:center">Sched→Show %</th>
-            <th style="text-align:center">Days on Market</th>
-            <th style="text-align:center">Turn Days</th>
-            <th style="text-align:center;background:#FEF3CD;font-weight:700">Days W/O Revenue</th>
-          </tr></thead>
-          <tbody id="sm-active-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-
-<!-- ShowMojo Leasing Funnel -->
-  <div style="margin-top:20px">
-    <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
-      <p style="font-size:17px;font-weight:700;color:var(--navy);margin:0">Leasing Funnel</p>
-      <p style="font-size:12px;color:var(--muted);margin:0">ShowMojo · Leads → Showings → Applications</p>
-    </div>
 
     <!-- 4 KPI cards -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
@@ -604,7 +541,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     <div class="card">
       <div class="ctitle">Work Orders by Month</div>
       <div class="csub">Created / Closed / Opened · by month</div>
-      <div class="cw"><canvas id="c-wo"></canvas></div>
+      <div class="cw"><canvas id="c-wo-maint"></canvas></div>
     </div>
     <div class="card">
       <div class="ctitle">WO Status Breakdown</div>
@@ -914,12 +851,29 @@ function render() {
       {label:'Created', data:ters.map(ter=>lkwe('wo_we',we,ter,p)),backgroundColor:C.sky,borderRadius:4}
     ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
        scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
+  mkChart('c-wo-maint','bar',ters,[
+      {label:'Created', data:ters.map(ter=>lkwe('wo_we',we,ter,p)),backgroundColor:C.sky,borderRadius:4}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
+       scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
   } else {
     mkChart('c-move','bar',MS,[
       {label:'Move-Ins', data:MONTHS.map(m=>lk('mi', y,m,t,p)), backgroundColor:C.sage},
       {label:'Move-Outs',data:MONTHS.map(m=>lk('mo', y,m,t,p)), backgroundColor:C.coral}
     ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},scales:{x:{grid:{display:false}},y:{grid:{color:'#F0ECE4'}}}});
     mkChart('c-wo','bar',MS,[
+      {label:'Opened', type:'line',borderColor:C.coral,backgroundColor:'transparent',
+       borderWidth:2,pointRadius:4,tension:0.3,order:0,
+       data:MONTHS.map(m=>lk('wo_opened',y,m,t,p)),yAxisID:'y2'},
+      {label:'Created',backgroundColor:C.sky,  borderRadius:3,order:1,data:MONTHS.map(m=>lk('wo_created',y,m,t,p)),yAxisID:'y'},
+      {label:'Closed', backgroundColor:C.sage, borderRadius:3,order:2,data:MONTHS.map(m=>lk('wo_closed', y,m,t,p)),yAxisID:'y'}
+    ],{plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',boxWidth:8}}},
+       scales:{
+         x:{grid:{display:false}},
+         y:{position:'left',grid:{color:'#F0ECE4'},title:{display:true,text:'WO Count'}},
+         y2:{position:'right',grid:{display:false},title:{display:true,text:'Opened'},
+             ticks:{color:C.coral}}
+       }});
+  mkChart('c-wo-maint','bar',MS,[
       {label:'Opened', type:'line',borderColor:C.coral,backgroundColor:'transparent',
        borderWidth:2,pointRadius:4,tension:0.3,order:0,
        data:MONTHS.map(m=>lk('wo_opened',y,m,t,p)),yAxisID:'y2'},
