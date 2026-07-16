@@ -562,6 +562,21 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
       <div class="cw"><canvas id="c-wo-completion"></canvas></div>
     </div>
   </div>
+
+
+  <!-- WO Journey -->
+  <div class="g2" style="margin-top:16px">
+    <div class="card">
+      <div class="ctitle">WO Journey — Avg Days per Stage by Territory</div>
+      <div class="csub">Created → Scheduled → Work Done · avg days in each stage</div>
+      <div class="cw"><canvas id="c-wo-journey-ter"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="ctitle">WO Journey — Avg Total Lifecycle by Portfolio</div>
+      <div class="csub">Top 20 properties · avg days from created to work done</div>
+      <div class="cw"><canvas id="c-wo-journey-prop"></canvas></div>
+    </div>
+  </div>
 </div>
 <div class="page" id="satisfaction">
   <p class="ptitle">Owner NPS &amp; Reviews</p>
@@ -2695,6 +2710,86 @@ function renderShowMojo() {
   // Event delegation registered at boot (see window.addEventListener below)
 }
 
+
+// ── WO JOURNEY ────────────────────────────────────────────────────────────────
+function renderWOJourney() {
+  if (!D2.wo_journey) return;
+  var F = getFilters();
+  var t = F.ters.length === 1 ? F.ters[0] : '';
+  var ALL_TERS = ['North OC','South OC','SD Properties','Commercial','Brenden','Elderkin','STONE'];
+  var ters = F.ters.length ? F.ters.filter(function(x){return ALL_TERS.indexOf(x)>=0;}) : ALL_TERS;
+
+  // ── By Territory: stacked bar — Stage 1 (→Sched) + Stage 2 (SchedWin) + Stage 3 (Sched→Done)
+  var byTer = D2.wo_journey.by_ter || {};
+  var terLabels = ters.filter(function(ter){return byTer[ter];});
+  var s1 = terLabels.map(function(ter){return byTer[ter].avg_to_sched || 0;});
+  var s2 = terLabels.map(function(ter){return byTer[ter].avg_sched_win || 0;});
+  var s3 = terLabels.map(function(ter){return byTer[ter].avg_sched_to_done || 0;});
+
+  mkChart('c-wo-journey-ter','bar',terLabels,[
+    {label:'Created → Scheduled',   data:s1, backgroundColor:'rgba(42,127,191,0.8)',  borderRadius:3, stack:'journey'},
+    {label:'Scheduled Window',       data:s2, backgroundColor:'rgba(201,168,76,0.8)',  borderRadius:3, stack:'journey'},
+    {label:'Scheduled → Work Done',  data:s3, backgroundColor:'rgba(46,125,83,0.8)',   borderRadius:3, stack:'journey'},
+  ],{
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},
+      tooltip:{callbacks:{
+        label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'d';}
+      }}
+    },
+    scales:{
+      x:{ticks:{font:{size:10}}},
+      y:{stacked:true,beginAtZero:true,
+         ticks:{callback:function(v){return v+'d';},font:{size:10}},
+         title:{display:true,text:'Avg Days',font:{size:10}}}
+    }
+  });
+
+  // ── By Portfolio: horizontal bar — top 20 props, avg total days, colored by territory
+  var TER_COLORS_WO = {
+    'North OC':'rgba(42,127,191,0.8)','South OC':'rgba(75,124,111,0.8)',
+    'SD Properties':'rgba(123,88,166,0.8)','Commercial':'rgba(217,92,58,0.8)',
+    'STONE':'rgba(74,74,74,0.8)','Elderkin':'rgba(224,123,57,0.8)','Brenden':'rgba(158,170,173,0.8)'
+  };
+  var byProp = (D2.wo_journey.by_prop || [])
+    .filter(function(p){
+      return p.avg_total != null && (!t || p.ter === t);
+    })
+    .slice(0,20);
+
+  var propLabels  = byProp.map(function(p){
+    return p.prop.length > 28 ? p.prop.slice(0,26)+'…' : p.prop;
+  });
+  var propTotals  = byProp.map(function(p){return p.avg_total || 0;});
+  var propS1      = byProp.map(function(p){return p.avg_to_sched || 0;});
+  var propS3      = byProp.map(function(p){return p.avg_sched_to_done || 0;});
+  var propColors  = byProp.map(function(p){return TER_COLORS_WO[p.ter]||'rgba(150,150,150,0.8)';});
+
+  mkChart('c-wo-journey-prop','bar',propLabels,[
+    {label:'Created → Scheduled',  data:propS1,
+     backgroundColor:'rgba(42,127,191,0.7)',  borderRadius:3, stack:'p'},
+    {label:'Scheduled → Work Done',data:propS3,
+     backgroundColor:'rgba(46,125,83,0.7)',   borderRadius:3, stack:'p'},
+  ],{
+    indexAxis:'y',
+    plugins:{
+      legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}},
+      tooltip:{callbacks:{
+        afterBody:function(items){
+          var idx=items[0].dataIndex;
+          var p=byProp[idx];
+          return ['Territory: '+p.ter,'WOs: '+p.count,'Total avg: '+(p.avg_total||0).toFixed(1)+'d'];
+        }
+      }}
+    },
+    scales:{
+      x:{stacked:true,beginAtZero:true,
+         ticks:{callback:function(v){return v+'d';},font:{size:9}}},
+      y:{stacked:true,ticks:{font:{size:9}}}
+    }
+  });
+}
+
 // ── TAB SWITCHING ─────────────────────────────────────
 function show(id, btn) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
@@ -2702,7 +2797,7 @@ function show(id, btn) {
   document.getElementById(id).classList.add('on');
   btn.classList.add('on');
   // Re-render charts now that the tab is visible
-  setTimeout(function(){ render(); renderStatic(); renderShowMojo(); renderScorecard(); renderEOS(); renderCEO(); renderCalls(); renderWOCompletion(); renderChurn(); renderReviewsDetail(); }, 50);
+  setTimeout(function(){ render(); renderStatic(); renderShowMojo(); renderScorecard(); renderEOS(); renderCEO(); renderCalls(); renderWOCompletion(); renderWOJourney(); renderChurn(); renderReviewsDetail(); }, 50);
 }
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
@@ -2784,6 +2879,7 @@ function applyF() {
   renderStatic();
   renderShowMojo();
   renderScorecard();
+  renderWOJourney();
   renderEOS();
   renderCEO();
   renderCalls();
@@ -2810,6 +2906,7 @@ function resetF() {
   renderStatic();
   renderShowMojo();
   renderScorecard();
+  renderWOJourney();
   renderEOS();
   renderCEO();
   renderCalls();
