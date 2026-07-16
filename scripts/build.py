@@ -1075,6 +1075,77 @@ except Exception as e:
   D2.setdefault('port_latest_we','')
 
 
+
+# ── WO Journey: lifecycle stage durations ─────────────────────────────────────
+print("[3b/7] Computing WO Journey stage durations...")
+try:
+    def _wo_avg(lst): return round(sum(lst)/len(lst),1) if lst else None
+
+    wo_journey_ter = defaultdict(lambda:{
+        'count':0,'completed':0,'s1':[],'s2':[],'s3':[],'total':[]})
+    wo_journey_prop = defaultdict(lambda:{
+        'count':0,'s1':[],'s2':[],'s3':[],'total':[],'ter':''})
+
+    for r in wo_rows[1:]:
+        if not r or not r[0]: continue
+        addr = str(r[0]).strip()
+        ter  = resolve(addr)
+        if not ter: continue
+        ter_str = ter.get('territory','') if isinstance(ter,dict) else ''
+        if not ter_str or ter_str in SKIP_TERS: continue
+
+        status    = str(r[10]).strip() if r[10] else ''
+        created   = r[14] if isinstance(r[14],datetime.datetime) else None
+        sched_s   = r[21] if isinstance(r[21],datetime.datetime) else None
+        sched_e   = r[22] if isinstance(r[22],datetime.datetime) else None
+        work_done = r[23] if isinstance(r[23],datetime.datetime) else None
+        if not created: continue
+
+        s1  = (sched_s   - created ).days if sched_s   and sched_s   >= created  else None
+        s2  = (sched_e   - sched_s ).days if sched_s   and sched_e   and sched_e >= sched_s  else None
+        s3  = (work_done - sched_e ).days if sched_e   and work_done and work_done >= sched_e else None
+        tot = (work_done - created  ).days if work_done and work_done >= created  else None
+
+        td = wo_journey_ter[ter_str]
+        td['count'] += 1
+        if status == 'Completed': td['completed'] += 1
+        if s1  is not None and s1  < 365: td['s1'].append(s1)
+        if s2  is not None and s2  < 365: td['s2'].append(s2)
+        if s3  is not None and s3  < 365: td['s3'].append(s3)
+        if tot is not None and tot < 365: td['total'].append(tot)
+
+        prop_key = addr.split(',')[0].strip()[:50]
+        pd = wo_journey_prop[prop_key]
+        pd['ter'] = ter_str; pd['count'] += 1
+        if s1  is not None and s1  < 365: pd['s1'].append(s1)
+        if s2  is not None and s2  < 365: pd['s2'].append(s2)
+        if s3  is not None and s3  < 365: pd['s3'].append(s3)
+        if tot is not None and tot < 365: pd['total'].append(tot)
+
+    D2['wo_journey'] = {
+        'by_ter': {ter:{
+            'count': d['count'], 'completed': d['completed'],
+            'avg_to_sched': _wo_avg(d['s1']),
+            'avg_sched_win': _wo_avg(d['s2']),
+            'avg_sched_to_done': _wo_avg(d['s3']),
+            'avg_total': _wo_avg(d['total']),
+        } for ter,d in wo_journey_ter.items()},
+        'by_prop': sorted([{
+            'prop': prop, 'ter': d['ter'], 'count': d['count'],
+            'avg_to_sched': _wo_avg(d['s1']),
+            'avg_sched_win': _wo_avg(d['s2']),
+            'avg_sched_to_done': _wo_avg(d['s3']),
+            'avg_total': _wo_avg(d['total']),
+        } for prop,d in wo_journey_prop.items() if d['count'] >= 3],
+        key=lambda x: -x['count'])[:50],  # top 50 properties by WO count
+    }
+    print(f"  WO Journey: {len(D2['wo_journey']['by_ter'])} territories, "
+          f"{len(D2['wo_journey']['by_prop'])} properties")
+except Exception as e:
+    import traceback; traceback.print_exc()
+    D2.setdefault('wo_journey', {'by_ter':{}, 'by_prop':[]})
+    print(f"  WARNING [3b/7]: WO Journey error: {e}")
+
 # ── SHOWMOJO: Leads → Showings → Apps funnel ─────────────────────────────────
 print("[4f/7] Computing ShowMojo leads/showings/apps data...")
 try:
