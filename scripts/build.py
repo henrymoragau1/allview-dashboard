@@ -125,13 +125,21 @@ DATA = {}
 mio_rows = read_sheet(FILES['move_inout'])
 mi_tbl=defaultdict(int); mo_tbl=defaultdict(int)
 mi_we=defaultdict(int);  mo_we=defaultdict(int)
+MONTHS_LST = ['January','February','March','April','May','June',
+              'July','August','September','October','November','December']
 for r in mio_rows[1:]:
     if not r or not r[0] or len(r) < 24: continue
     attrs=resolve(r[0]) or {}
     ter=attrs.get('territory',''); prop=attrs.get('proptype','')
     event=str(r[3]).strip() if r[3] else ''
-    month=str(r[23]).strip() if r[23] else ''   # col X = Month (no year filter)
-    year=str(r[22]).strip() if r[22] else ''     # col W = Year (kept for WE filter)
+    # Use col C (index 2) = actual Date for month/year — accurate calendar month
+    date_val = r[2]
+    if isinstance(date_val, datetime.datetime):
+        month = MONTHS_LST[date_val.month - 1]
+        year  = str(date_val.year)
+    else:
+        month=str(r[23]).strip() if r[23] else ''  # fallback to WE-derived col
+        year =str(r[22]).strip() if r[22] else ''
     we=r[24].strftime('%Y-%m-%d') if r[24] and hasattr(r[24],'strftime') else ''
     if event not in ('Move-in','Move-out'): continue
     tbl=mi_tbl if event=='Move-in' else mo_tbl
