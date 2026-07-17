@@ -235,9 +235,10 @@ DATA['we_month']=we_month_map
 ut_rows=read_sheet(FILES['unit_turn'],'Unit Turn Details')
 ut_tbl=defaultdict(lambda:{'sum':0,'cnt':0})
 for r in ut_rows[1:]:
-    if not r or not r[17]: continue
-    if r[16] is not None and str(r[16]).strip()!='': continue  # blank comment
-    if not r[25]: continue  # posted to internet at must have a date
+    if not r or not r[0]: continue
+    if r[17] is None: continue                                  # col R must have a value (0 is valid)
+    if r[16] is not None and str(r[16]).strip()!='': continue  # col Q comment must be blank
+    if not r[25]: continue                                      # col Z posted to internet must have a date
     attrs=resolve(r[0]) or {}
     ter=attrs.get('territory',''); prop=attrs.get('proptype','')
     days=r[17] if isinstance(r[17],(int,float)) else 0
