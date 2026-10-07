@@ -297,6 +297,34 @@ print(f"  DATA: {list(DATA.keys())}")
 print("[4/7] Computing D2 tables...")
 D2={}
 
+# ── Lease Renewal Performance matrix (Leasing & Vacancy tab) ────────────────
+# Source: LR_Performance.xlsx, sheet 'Lease Exp' (weekly snapshots).
+# Each WE repeats every lease expiring in that month with its current status,
+# so a month is read from its LATEST WE snapshot (col O/P = Year/Month, col Q = WE).
+# Cols: J Counter (=1 per lease expiring), L Lease Renewed, M Move Out, N Pending,
+#       C Territory, R Property Address (fallback col A).
+# Output rows (compact): [we, year, month, territory, proptype, address, exp, ren, mo, pend]
+LR_TER_MAP = {'NORTH OC':'North OC','NORTH':'North OC','SOUTH OC':'South OC','SOUTH':'South OC',
+              'SD PROPERTIES':'SD Properties','SD':'SD Properties','MID OC':'Mid OC',
+              'COMMERCIAL':'Commercial','BRENDEN':'Brenden','ELDERKIN':'Elderkin','STONE':'STONE'}
+def _n1(v):
+    try: return 1 if v is not None and str(v).strip()!='' and float(v)>=1 else 0
+    except (TypeError, ValueError): return 0
+lr_matrix_rows=[]
+for r in read_sheet(FILES['lr'])[1:]:
+    if not r or len(r)<18 or not r[0]: continue
+    if not (r[16] and hasattr(r[16],'strftime')) or not r[14] or not r[15]: continue
+    addr=str(r[17] or r[0]).strip()
+    attrs=resolve(r[17]) or resolve(r[0]) or {}
+    raw_ter=str(r[2]).strip() if r[2] else attrs.get('territory','')
+    ter=LR_TER_MAP.get(raw_ter.upper(), raw_ter)
+    if ter in SKIP_TERS: continue
+    lr_matrix_rows.append([r[16].strftime('%Y-%m-%d'), str(r[14]).strip(), str(r[15]).strip(),
+                           ter, attrs.get('proptype',''), addr,
+                           _n1(r[9]) or 1, _n1(r[11]), _n1(r[12]), _n1(r[13])])
+D2['lr_matrix']=lr_matrix_rows
+print(f"  LR matrix: {len(lr_matrix_rows)} lease-snapshot rows")
+
 # Vacancy
 vac_rate=read_sheet(FILES['vacancy'],'Vacancy Rate')
 ter_map1=read_sheet(FILES['vacancy'],'Territory Mapping1')
