@@ -456,6 +456,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--light);color:var(--text);
     </div>
     <div class="card"><div class="ctitle"><span class="chart-info-wrap">Lease Renewal Outcomes<span class="chart-info-icon">i</span><span class="chart-info-bubble"><b>What it shows</b>Month-end snapshot of lease renewal status for expiring leases.<span class="info-formula" style="display:block"><b style="color:#C9A84C;display:inline">Formula</b> Count of leases Renewed, Move-Out, and Expiring (pending) per month-end snapshot.</span><span class="info-tip" style="display:block"><b style="color:#A8D5A2;display:inline">How to read</b> High renewal rate = strong tenant satisfaction. Track month-over-month for retention trends.</span></span></div><div class="csub">EOM snapshot · 2026 · last WE of each month</div><div class="cw"><canvas id="c-lr"></canvas></div></div>
   </div>
+  <!-- Lease Renewal Performance matrix (Territory → Property) -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ctitle"><span class="chart-info-wrap"><span id="lrm-title">Lease Renewal Performance</span><span class="chart-info-icon">i</span><span class="chart-info-bubble"><b>What it shows</b>Leases expiring in the period and their renewal outcome, by territory. Click a territory to see its properties.<span class="info-formula" style="display:block"><b style="color:#C9A84C;display:inline">Formula</b> Each month is read from its latest weekly snapshot. LR % = Renewed ÷ (Renewed + Moved-Out); pending leases are not counted until decided. Multiple months = sum of each month's latest snapshot.</span><span class="info-tip" style="display:block"><b style="color:#A8D5A2;display:inline">How to read</b> Goal ≥ 80% (green); below goal is red. Leases Expiring includes pending leases, so a high Pending count means the month's LR % can still move.</span></span></span></div>
+    <div class="csub" id="lrm-sub">Latest WE snapshot · current month to date</div>
+    <div style="overflow-x:auto">
+      <table class="dt" id="lrm-table">
+        <thead><tr>
+          <th style="text-align:left">Territory / Property</th>
+          <th style="text-align:right">Leases Expiring</th>
+          <th style="text-align:right">Renewed</th>
+          <th style="text-align:right">Moved-Out</th>
+          <th style="text-align:right">Pending to Renew</th>
+          <th style="text-align:right">LR %</th>
+        </tr></thead>
+        <tbody id="lrm-tbody"></tbody>
+      </table>
+    </div>
+  </div>
   <div class="g2">
     <div class="card">
       <div class="ctitle"><span class="chart-info-wrap">Top Vacant Properties<span class="chart-info-icon">i</span><span class="chart-info-bubble"><b>What it shows</b>Properties with the longest current vacancy duration.<span class="info-formula" style="display:block"><b style="color:#C9A84C;display:inline">Formula</b> Days since unit became vacant-unrented.</span><span class="info-tip" style="display:block"><b style="color:#A8D5A2;display:inline">How to read</b> Long-vacant properties cost revenue daily. Escalate if vacant &gt; 30 days without active listing.</span></span></div><div class="csub" id="vac-sub">Snapshot: 2026-06-21 · sorted by days vacant</div>
@@ -2699,15 +2717,15 @@ function renderShowMojo() {
         '<td style="text-align:center;padding:9px 12px;font-weight:700;font-size:12px;color:'+s2sC_ag+'">'+
           (s2s_ag!=null?s2s_ag+'%':'—')+'</td>'+
         '<td style="text-align:center;padding:9px 12px;font-size:12px">'+
-          (avgDom!=null?avgDom+'d':'—')+'</td>'+
+          (avgDom?avgDom+'d':'—')+'</td>'+
       '<td style="text-align:center;padding:9px 12px;font-size:12px">'+
           (function(){
-            var td=ag.listings.filter(function(l){return l.turn_days!=null;}).map(function(l){return l.turn_days;});
+            var td=ag.listings.filter(function(l){return l.turn_days;}).map(function(l){return l.turn_days;});
             return td.length ? Math.round(td.reduce(function(a,b){return a+b;},0)/td.length)+'d' : '—';
           })()+'</td>'+
       '<td style="text-align:center;padding:9px 12px;font-size:12px;font-weight:700;background:#FEF3CD">'+
           (function(){
-            var dw=ag.listings.filter(function(l){return l.dwr!=null;}).map(function(l){return l.dwr;});
+            var dw=ag.listings.filter(function(l){return l.dwr;}).map(function(l){return l.dwr;});
             return dw.length ? Math.round(dw.reduce(function(a,b){return a+b;},0)/dw.length)+'d avg' : '—';
           })()+'</td>'+
       '</tr>';
@@ -2726,10 +2744,10 @@ function renderShowMojo() {
           '<td style="text-align:right;padding:6px 12px;font-size:11px">'+l.actual+'</td>'+
           '<td style="text-align:center;padding:6px 12px;font-size:11px;font-weight:600;color:'+ls2sC+'">'+
             (ls2s!=null?ls2s+'%':'—')+'</td>'+
-          '<td style="text-align:center;padding:6px 12px;font-size:11px">'+(l.dom!=null?l.dom+'d':'—')+'</td>'+
-          '<td style="text-align:center;padding:6px 12px;font-size:11px">'+(l.turn_days!=null?l.turn_days+'d':'—')+'</td>'+
+          '<td style="text-align:center;padding:6px 12px;font-size:11px">'+(l.dom?l.dom+'d':'—')+'</td>'+
+          '<td style="text-align:center;padding:6px 12px;font-size:11px">'+(l.turn_days?l.turn_days+'d':'—')+'</td>'+
           '<td style="text-align:center;padding:6px 12px;font-size:11px;font-weight:700;background:#FFFBF0">'+
-            (l.dwr!=null?l.dwr+'d':'—')+'</td>'+
+            (l.dwr?l.dwr+'d':'—')+'</td>'+
         '</tr>';
       });
     });
@@ -2833,6 +2851,124 @@ function show(id, btn) {
 
 // ── FILTER FUNCTIONS ──────────────────────────────────
 // ── MULTI-SELECT FILTER HELPERS ──────────────────────────────────────────────
+// ── Lease Renewal Performance matrix (Leasing & Vacancy) ─────────────────
+// D2.lr_matrix rows: [we, year, month, ter, proptype, address, exp, ren, mo, pend]
+var LRM_OPEN = {};   // remembers which territories are expanded across re-renders
+function renderLRMatrix() {
+  var tbody = document.getElementById('lrm-tbody');
+  if (!tbody) return;
+  var src = (typeof D2 !== 'undefined' && D2.lr_matrix) || [];
+  var F = getFilters();
+  var MN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  // Territory / property-type scope. Commercial is excluded unless explicitly selected.
+  var rows = src.filter(function(r){
+    if (F.ters.length) { if (F.ters.indexOf(r[3]) < 0) return false; }
+    else if (r[3] === 'Commercial') return false;
+    if (F.pts.length && F.pts.indexOf(r[4]) < 0) return false;
+    return true;
+  });
+
+  // Pick one snapshot WE per year|month
+  var snap = {};   // 'YYYY|Month' -> WE
+  function keep(ym, we){ if (!snap[ym] || we > snap[ym]) snap[ym] = we; }
+  var latestWE = '';
+  src.forEach(function(r){ if (r[0] > latestWE) latestWE = r[0]; });
+  var latestYM = '';
+  src.forEach(function(r){ if (r[0] === latestWE) latestYM = r[1] + '|' + r[2]; });
+
+  if (F.wes.length) {
+    src.forEach(function(r){ if (F.wes.indexOf(r[0]) >= 0) keep(r[1] + '|' + r[2], r[0]); });
+  } else if (F.years.length || F.months.length) {
+    src.forEach(function(r){
+      if (F.years.length  && F.years.indexOf(r[1])  < 0) return;
+      if (F.months.length && F.months.indexOf(r[2]) < 0) return;
+      keep(r[1] + '|' + r[2], r[0]);
+    });
+  } else if (latestYM) {
+    snap[latestYM] = latestWE;   // default: current month to date
+  }
+  rows = rows.filter(function(r){ return snap[r[1] + '|' + r[2]] === r[0]; });
+
+  // Title / subtitle
+  var yms = Object.keys(snap).sort(function(a, b){
+    var A = a.split('|'), B = b.split('|');
+    return A[0] !== B[0] ? (A[0] < B[0] ? -1 : 1) : MN.indexOf(A[1]) - MN.indexOf(B[1]);
+  });
+  var label = 'No data';
+  if (yms.length === 1) {
+    var p = yms[0].split('|');
+    label = p[1] + ' ' + p[0] + (yms[0] === latestYM ? ' MTD' : '');
+  } else if (yms.length > 1) {
+    var f = yms[0].split('|'), l = yms[yms.length - 1].split('|');
+    label = f[1].slice(0,3) + ' ' + f[0] + ' – ' + l[1].slice(0,3) + ' ' + l[0];
+  }
+  var tEl = document.getElementById('lrm-title');
+  if (tEl) tEl.textContent = 'Lease Renewal Performance (' + label + ')';
+  var sEl = document.getElementById('lrm-sub');
+  if (sEl) sEl.textContent = yms.length === 1
+    ? 'Snapshot WE ' + snap[yms[0]] + ' · click a territory to see properties'
+    : yms.length > 1 ? 'Sum of ' + yms.length + ' monthly snapshots (latest WE of each month) · click a territory to see properties'
+    : 'No lease renewal data for the selected filters';
+
+  // Aggregate territory → property
+  function blank(){ return {exp:0, ren:0, mo:0, pend:0}; }
+  function add(a, r){ a.exp += r[6]; a.ren += r[7]; a.mo += r[8]; a.pend += r[9]; }
+  var terMap = {}, tot = blank();
+  rows.forEach(function(r){
+    var t = terMap[r[3]] || (terMap[r[3]] = {sum: blank(), props: {}});
+    add(t.sum, r); add(tot, r);
+    add(t.props[r[5]] || (t.props[r[5]] = blank()), r);
+  });
+
+  function pctCell(a, bold) {
+    var den = a.ren + a.mo;   // decided leases only (pending excluded)
+    if (!den) return '<td style="text-align:right;color:var(--muted)">—</td>';
+    var v = a.ren / den * 100;
+    var st = v >= 80 ? 'background:#E6F4EF;color:#2E7D53' : 'background:#FDECEA;color:#B93B2E';
+    return '<td style="text-align:right;' + st + ';font-weight:' + (bold ? 700 : 500) + '">' + v.toFixed(2) + '%</td>';
+  }
+  function nums(a, bold) {
+    var fw = bold ? 'font-weight:700;' : '';
+    return ['exp','ren','mo','pend'].map(function(k){
+      return '<td style="text-align:right;' + fw + '">' + a[k] + '</td>';
+    }).join('') + pctCell(a, bold);
+  }
+
+  var ters = Object.keys(terMap).sort();
+  if (!ters.length) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No leases expiring for the selected filters</td></tr>';
+    return;
+  }
+  var html = '';
+  ters.forEach(function(t){
+    var uid = 'lrm-' + t.replace(/[^a-z0-9]/gi, '-');
+    var open = !!LRM_OPEN[uid];
+    html += '<tr class="lrm-ter-hdr" data-uid="' + uid + '" style="background:#E8E4DC;cursor:pointer;user-select:none">' +
+      '<td style="font-weight:700"><span id="' + uid + '-ic" style="display:inline-block;width:16px;font-weight:700;color:var(--muted)">' + (open ? '-' : '+') + '</span>' + t + '</td>' +
+      nums(terMap[t].sum, true) + '</tr>';
+    Object.keys(terMap[t].props).sort().forEach(function(addr, i){
+      html += '<tr class="lrm-d-' + uid + '" style="display:' + (open ? '' : 'none') + ';background:' + (i % 2 ? '#FAFAF8' : '#F5F3EE') + '">' +
+        '<td style="padding-left:30px;font-size:11.5px">' + addr + '</td>' + nums(terMap[t].props[addr], false) + '</tr>';
+    });
+  });
+  html += '<tr style="border-top:2px solid #0D1B2A"><td style="font-weight:700">Total</td>' + nums(tot, true) + '</tr>';
+  tbody.innerHTML = html;
+}
+
+// Expand / collapse territory rows (registered once, document-level delegation)
+document.addEventListener('click', function(e){
+  var hdr = e.target.closest ? e.target.closest('.lrm-ter-hdr') : null;
+  if (!hdr) return;
+  var uid = hdr.getAttribute('data-uid');
+  LRM_OPEN[uid] = !LRM_OPEN[uid];
+  var ic = document.getElementById(uid + '-ic');
+  if (ic) ic.textContent = LRM_OPEN[uid] ? '-' : '+';
+  document.querySelectorAll('.lrm-d-' + uid).forEach(function(row){
+    row.style.display = LRM_OPEN[uid] ? '' : 'none';
+  });
+});
+
 function getSelected(cls) {
   // Returns array of checked values, or [] if all checked / "All" checked
   var all = document.querySelectorAll('.' + cls);
@@ -2917,6 +3053,7 @@ function applyF() {
   renderWOCompletion();
   renderChurn();
   renderReviewsDetail();
+  renderLRMatrix();
 }
 
 function resetF() {
@@ -2944,6 +3081,7 @@ function resetF() {
   renderWOCompletion();
   renderChurn();
   renderReviewsDetail();
+  renderLRMatrix();
 }
 
 // ── BOOT ──────────────────────────────────────────────
@@ -2980,6 +3118,7 @@ window.addEventListener('load', function() {
   renderWOCompletion();
   renderChurn();
   renderReviewsDetail();
+  renderLRMatrix();
 });
 </script>
 
